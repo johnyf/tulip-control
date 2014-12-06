@@ -5,6 +5,7 @@ logger = logging.getLogger(__name__)
 logging.getLogger('tulip.transys.products').setLevel(logging.DEBUG)
 from tulip import transys as trs
 from tulip.transys.mathset import MathSet, PowerSet
+from tulip.transys import products
 
 
 def ts_test():
@@ -42,28 +43,30 @@ def ts_test():
 
 
 def ba_test():
-    ba = trs.BA()
+    ba = trs.Automaton()
 
     aps = ['p']
-    ba.atomic_propositions |= {'p'}
-    assert('p' in ba.atomic_propositions)
-    assert(ba.atomic_propositions == MathSet(aps) )
-    assert(ba.alphabet == PowerSet(aps) )
 
+    ba.alphabet.math_set |= {'p'}
+    props = ba.alphabet.math_set
+    assert 'p' in props
+    assert props == MathSet(aps)
+    assert ba.alphabet == PowerSet(aps)
 
     ba.states.add_from({'q0', 'q1'})
     assert set(ba.states) == {'q0', 'q1'}
 
     ba.states.initial.add('q0')
-    
-    ba.states.accepting.add('q1')
-    assert(set(ba.states.accepting) == {'q1'})
-    
-    ba.transitions.add('q0', 'q1', letter={'p'})
-    ba.transitions.add('q1', 'q1', letter={'p'})
-    ba.transitions.add('q1', 'q0', letter=set() )
-    ba.transitions.add('q0', 'q0', letter=set() )
-    
+    assert set(ba.states.initial) == {'q0'}
+
+    ba.accepting_sets.add('q1')
+    assert set(ba.accepting_sets) == {'q1'}
+
+    ba.transitions.add('q0', 'q1', guard={'p'})
+    ba.transitions.add('q1', 'q1', guard={'p'})
+    ba.transitions.add('q1', 'q0', guard=set())
+    ba.transitions.add('q0', 'q0', guard=set())
+
     logger.debug(ba)
     ba.save('ba.pdf')
     return ba
@@ -72,11 +75,11 @@ def ba_test():
 def ba_ts_prod_test():
     ts = ts_test()
     ba = ba_test()
-    ba_ts = trs.products.ba_ts_sync_prod(ba, ts)
 
+    ba_ts = products.ba_ts_sync_prod(ba, ts)
     check_prodba(ba_ts)
-    (ts_ba, persistent) = trs.products.ts_ba_sync_prod(ts, ba)
 
+    (ts_ba, persistent) = products.ts_ba_sync_prod(ts, ba)
 
     states = {('s0', 'q1'), ('s1', 'q0'),
               ('s2', 'q0'), ('s3', 'q0')}
