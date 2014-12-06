@@ -115,15 +115,3 @@ def check_prodba(ba_ts):
             [('s3', 'q0')], [('s0', 'q1')]
         )[0][2]['letter'] == {'p'}
     )
-
-def on_the_fly_test():
-    ba = ba_test()
-    ts = ts_test()
-    prodba = trs.OnTheFlyProductAutomaton(ba, ts)
-    assert(set(prodba.states) == {('s0', 'q1'), ('s1', 'q0')})
-    
-    prodba.save('prodba_initialized.pdf')
-    prodba.add_all_states()
-    check_prodba(prodba)
-    prodba.save('prodba_full.pdf')
-
