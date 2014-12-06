@@ -249,10 +249,10 @@ class LabeledDiGraph_test():
         # note how untyped keys can be set directly via assignment,
         # whereas check=False is needed for G.add_node
         G.node[1]['mont'] = 'Feb'
-        assert(G.node[1] == {'mont':'Feb'})
+        assert(G.node[1] == {'mont': 'Feb'})
 
         G[1][2][0]['day'] = 'Tue'
-        assert(G[1][2][0] == {'month':'Jan', 'day':'Tue'})
+        assert(G[1][2][0] == {'month': 'Jan', 'day': 'Tue'})
 
         self.G = G
 
@@ -266,7 +266,7 @@ class LabeledDiGraph_test():
         because check=False
         """
         self.G.add_edge(1, 2, mo='Jan', check=False)
-        assert(self.G[1][2][1] == {'mo':'Jan'})
+        assert self.G[1][2][1] == {'mo': 'Jan'}
 
     @raises(ValueError)
     def test_add_edge_illegal_value(self):
@@ -294,10 +294,10 @@ def open_fts_multiple_env_actions_test():
             'name': 'env_choices',
             'values': env_choice}]
     ts = FTS(env_actions)
-    assert(ts.env_modes is env_modes)
-    assert(not hasattr(ts, 'env_choices') )
-    assert(ts.sys_actions == MathSet() )
 
+    assert ts.env_modes is env_modes
+    assert not hasattr(ts, 'env_choices')
+    assert ts.sys_actions == MathSet()
 
 
 def test_remove_deadends():
@@ -311,19 +311,19 @@ def test_remove_deadends():
         g.add_edge(i, j)
 
     g.remove_deadends()
-    assert(len(g) == n)
+    assert len(g) == n
 
     # line + cycle
     g.add_nodes_from(range(n, 2*n))
     for i in xrange(n, 2*n-1):
         g.add_edge(i, i+1)
-    assert(len(g) == 2*n)
+    assert len(g) == 2*n
 
     g.remove_deadends()
-    assert(len(g) == n)
+    assert len(g) == n
 
     # line
     g.remove_edge(4, 0)
 
     g.remove_deadends()
-    assert(len(g) == 0)
+    assert len(g) == 0
