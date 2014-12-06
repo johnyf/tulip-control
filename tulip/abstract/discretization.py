@@ -917,10 +917,10 @@ def discretize(
     if debug:
         tmp_part = deepcopy(new_part)
         tmp_part.compute_adj()
-    
-    # Generate transition system and add transitions       
-    ofts = trs.FTS()
-    
+
+    # Generate transition system and add transitions
+    ofts = trs.TransitionSystem()
+
     adj = sp.lil_matrix(transitions.T)
     n = adj.shape[0]
     ofts_states = range(n)
@@ -1290,9 +1290,9 @@ def merge_abstractions(merged_abstr, trans, abstr, modes, mode_nums):
     aps = abstr[modes[0]].ts.atomic_propositions
     
     logger.info('APs: ' + str(aps))
-    
-    sys_ts = trs.FTS()
-    
+
+    sys_ts = trs.TransitionSystem()
+
     # create stats
     n = len(merged_abstr.ppp)
     states = range(n)

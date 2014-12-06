@@ -8,10 +8,11 @@ from nose.tools import assert_raises
 import numpy as np
 from scipy import sparse as sp
 from tulip import spec, synth, transys
+from tulip.transys import TransitionSystem as FTS
 
 
 def sys_fts_2_states():
-    sys = transys.FTS()
+    sys = FTS()
     sys.states.add_from(['X0', 'X1'])
     sys.states.initial.add_from(['X0', 'X1'])
 
@@ -28,7 +29,7 @@ def sys_fts_2_states():
 
 
 def env_fts_2_states():
-    env = transys.FTS()
+    env = FTS()
     env.owner = 'env'
 
     env.states.add_from({'e0', 'e1'})
@@ -45,7 +46,7 @@ def env_fts_2_states():
 
 
 def env_ofts_bool_actions():
-    env = transys.FTS()
+    env = FTS()
     env.owner = 'env'
 
     env.states.add_from({'e0', 'e1', 'e2'})
@@ -315,7 +316,7 @@ def test_only_mode_control():
     bad low-level feedback controllers.
     """
     # Create a finite transition system
-    env_sws = transys.FTS()
+    env_sws = FTS()
     env_sws.owner = 'env'
 
     env_sws.sys_actions.add_from({'right', 'left'})
@@ -386,7 +387,7 @@ def multiple_env_actions_test():
         }
     ]
 
-    sys = transys.FTS(env_actions)
+    sys = FTS(env_actions)
     sys.states.add_from({'s1', 's2', 's3'})
     sys.states.initial.add_from({'s1'})
 
@@ -424,47 +425,47 @@ def test_var_name_conflicts():
     # FTS to spec
 
     # states vs APs
-    sys = transys.FTS()
+    sys = FTS()
     sys.states.add('out')
     sys.atomic_propositions.add('out')
 
     conversion_raises(synth.sys_to_spec, sys)
 
     # states vs sys_actions
-    sys = transys.FTS()
+    sys = FTS()
     sys.states.add('out')
     sys.sys_actions.add('out')
 
     conversion_raises(synth.sys_to_spec, sys)
 
-    sys = transys.FTS()
+    sys = FTS()
     sys.states.add('sys_actions')
     sys.sys_actions.add('out')
 
     conversion_raises(synth.sys_to_spec, sys)
 
     # states vs env_actions
-    env = transys.FTS()
+    env = FTS()
     env.states.add('out')
     env.env_actions.add('out')
 
     conversion_raises(synth.env_to_spec, env)
 
-    env = transys.FTS()
+    env = FTS()
     env.states.add('env_actions')
     env.env_actions.add('out')
 
     conversion_raises(synth.env_to_spec, env)
 
     # APs vs sys_actions
-    sys = transys.FTS()
+    sys = FTS()
     sys.states.add('s0')
     sys.atomic_propositions.add('out')
     sys.env_actions.add('out')
 
     conversion_raises(synth.sys_to_spec, sys)
 
-    sys = transys.FTS()
+    sys = FTS()
     sys.states.add('s0')
     sys.atomic_propositions.add('sys_actions')
     sys.env_actions.add('out')
@@ -472,14 +473,14 @@ def test_var_name_conflicts():
     conversion_raises(synth.sys_to_spec, sys)
 
     # APs vs env_actions
-    env = transys.FTS()
+    env = FTS()
     env.states.add('s0')
     env.atomic_propositions.add('out')
     env.env_actions.add('out')
 
     conversion_raises(synth.env_to_spec, env)
 
-    env = transys.FTS()
+    env = FTS()
     env.states.add('s0')
     env.atomic_propositions.add('env_actions')
     env.env_actions.add('out')
@@ -489,7 +490,7 @@ def test_var_name_conflicts():
     # OpenFTS to spec
 
     # states vs APs
-    sys = transys.FTS()
+    sys = FTS()
     sys.states.add('out')
     sys.atomic_propositions.add('out')
 
@@ -498,7 +499,7 @@ def test_var_name_conflicts():
     conversion_raises(synth.env_to_spec, sys)
 
     # states vs sys_actions
-    sys = transys.FTS()
+    sys = FTS()
     sys.states.add('out')
     sys.sys_actions.add('out')
 
@@ -506,7 +507,7 @@ def test_var_name_conflicts():
 
     conversion_raises(synth.env_to_spec, sys)
 
-    sys = transys.FTS()
+    sys = FTS()
     sys.states.add('sys_actions')
     sys.sys_actions.add('out')
 
@@ -515,7 +516,7 @@ def test_var_name_conflicts():
     conversion_raises(synth.env_to_spec, sys)
 
     # states vs env_actions
-    sys = transys.FTS()
+    sys = FTS()
     sys.states.add('out')
     sys.env_actions.add('out')
 
@@ -523,7 +524,7 @@ def test_var_name_conflicts():
 
     conversion_raises(synth.env_to_spec, sys)
 
-    sys = transys.FTS()
+    sys = FTS()
     sys.states.add('env_actions')
     sys.env_actions.add('out')
 
@@ -532,7 +533,7 @@ def test_var_name_conflicts():
     conversion_raises(synth.env_to_spec, sys)
 
     # sys_actions vs APs
-    sys = transys.FTS()
+    sys = FTS()
     sys.states.add('s0')
     sys.sys_actions.add('out')
     sys.atomic_propositions.add('out')
@@ -541,7 +542,7 @@ def test_var_name_conflicts():
 
     conversion_raises(synth.env_to_spec, sys)
 
-    sys = transys.FTS()
+    sys = FTS()
     sys.states.add('s0')
     sys.sys_actions.add('out')
     sys.atomic_propositions.add('sys_actions')
@@ -551,7 +552,7 @@ def test_var_name_conflicts():
     conversion_raises(synth.env_to_spec, sys)
 
     # env_actions vs APs
-    sys = transys.FTS()
+    sys = FTS()
     sys.states.add('s0')
     sys.env_actions.add('out')
     sys.atomic_propositions.add('out')
@@ -560,7 +561,7 @@ def test_var_name_conflicts():
 
     conversion_raises(synth.env_to_spec, sys)
 
-    sys = transys.FTS()
+    sys = FTS()
     sys.states.add('s0')
     sys.env_actions.add('out')
     sys.atomic_propositions.add('env_actions')

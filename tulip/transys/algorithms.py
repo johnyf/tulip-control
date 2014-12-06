@@ -30,23 +30,19 @@
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 """Algorithms on Kripke structures and Automata"""
-from __future__ import absolute_import
 import logging
+logger = logging.getLogger(__name__)
 import copy
-from tulip.transys.transys import FiniteTransitionSystem
-from tulip.transys.automata import BuchiAutomaton
 import networkx as nx
 from tulip.interfaces import ltl2ba as ltl2baint
 # possible future:
 # from tulip.transys.transys import TransitionSystem
 # from tulip.transys.automata import Automaton
 from tulip.transys.labeled_graphs import LabeledDiGraph
+from tulip.transys.transys import TransitionSystem
 
 
 _hl = 40 * '-'
-logger = logging.getLogger(__name__)
-
-
 # build parser once only
 parser = ltl2baint.Parser()
 
@@ -232,9 +228,9 @@ def strong_product(self, other):
 def ts_sync_prod(ts1, ts2):
     """Synchronous (tensor) product with other FTS.
 
-    @type ts1, ts2: L{FiniteTransitionSystem}
+    @type ts1, ts2: L{TransitionSystem}
     """
-    prod_ts = FiniteTransitionSystem()
+    prod_ts = TransitionSystem()
     # union of AP sets
     prod_ts.atomic_propositions |= \
         ts1.atomic_propositions | ts2.atomic_propositions
@@ -242,8 +238,7 @@ def ts_sync_prod(ts1, ts2):
     #
     # for synchronous product: Cartesian product of action sets
     # prod_ts.actions |= ts1.actions * ts2.actions
-    prod_ts = super(FiniteTransitionSystem, self).tensor_product(
-        ts, prod_sys=prod_ts)
+    prod_ts = TransitionSystem.tensor_product(ts, prod_sys=prod_ts)
     return prod_ts
 
 
@@ -252,7 +247,7 @@ def sync_prod(ts, ba):
 
     The result is always a L{BuchiAutomaton}:
 
-        - If C{ts_or_ba} is a L{FiniteTransitionSystem} TS,
+        - If C{ts_or_ba} is a L{TransitionSystem} TS,
             then return the synchronous product BA * TS.
 
             The accepting states of BA * TS are those which
@@ -271,7 +266,7 @@ def sync_prod(ts, ba):
 
     Synchronous product TS * BA or TS1 * TS2.
 
-    Returns a Finite Transition System, because TS is
+    Returns a L{TransitionSystem}, because TS is
     the first term in the product.
 
     Changing term order, i.e., BA * TS, returns the
@@ -289,7 +284,7 @@ def sync_prod(ts, ba):
     L{_ts_ba_sync_prod}
 
     @param ts_or_ba: other with which to take synchronous product
-    @type ts_or_ba: L{FiniteTransitionSystem} or L{BuchiAutomaton}
+    @type ts_or_ba: L{TransitionSystem} or L{BuchiAutomaton}
 
     @return: self * ts_or_ba
     @rtype: L{BuchiAutomaton}
@@ -303,19 +298,19 @@ def sync_prod(ts, ba):
     <http://tulip-control.sourceforge.net/doc/bibliography.html#bk08>}
 
     @param ts_or_ba: system with which to take synchronous product
-    @type ts_or_ba: L{FiniteTransitionSystem} or L{BuchiAutomaton}
+    @type ts_or_ba: L{TransitionSystem} or L{BuchiAutomaton}
 
     @return: synchronous product C{self} x C{ts_or_ba}
-    @rtype: L{FiniteTransitionSystem}
+    @rtype: L{TransitionSystem}
     """
     if not isinstance(ba, BuchiAutomaton):
         raise Exception
-    if not isinstance(ts, FiniteTransitionSystem):
+    if not isinstance(ts, TransitionSystem):
         raise Exception
 
 
 def add(self, other):
-    """Merge two Finite Transition Systems.
+    """Merge two transition systems.
 
     States, Initial States, Actions, Atomic Propositions and
     State labels and Transitions of the second Transition System
@@ -348,16 +343,16 @@ def add(self, other):
     L{line_labeled_with}, L{cycle_labeled_with}
 
     @param other: system to merge with
-    @type other: C{FiniteTransitionSystem}
+    @type other: C{TransitionSystem}
 
     @return: merge of C{self} with C{other}, union of states,
         initial states, atomic propositions, actions, edges and
         labelings, those of C{other} taking precedence over C{self}.
-    @rtype: L{FiniteTransitionSystem}
+    @rtype: L{TransitionSystem}
     """
-    if not isinstance(other, FiniteTransitionSystem):
+    if not isinstance(other, TransitionSystem):
         msg = (
-            'other class must be FiniteTransitionSystem.\n'
+            'other class must be TransitionSystem.\n'
             'Got instead:\n\t' + str(other) +
             '\nof type:\n\t' + str(type(other)))
         raise TypeError(msg)
@@ -391,19 +386,19 @@ def async_prod(self, ts):
     Def. 2.18, p.38 U{[BK08]
     <http://tulip-control.sourceforge.net/doc/bibliography.html#bk08>}
     """
-    if not isinstance(ts, FiniteTransitionSystem):
-        raise TypeError('ts must be a FiniteTransitionSystem.')
+    if not isinstance(ts, TransitionSystem):
+        raise TypeError('ts must be a TransitionSystem.')
     if self.states.mutants or ts.states.mutants:
         mutable = True
     else:
         mutable = False
     # union of AP sets
-    prod_ts = FiniteTransitionSystem(mutable=mutable)
+    prod_ts = TransitionSystem(mutable=mutable)
     prod_ts.atomic_propositions |= \
         self.atomic_propositions | ts.atomic_propositions
     # for parallel product: union of action sets
     prod_ts.actions |= self.actions | ts.actions
-    prod_ts = super(FiniteTransitionSystem, self).cartesian_product(
+    prod_ts = super(TransitionSystem, self).cartesian_product(
         ts, prod_sys=prod_ts)
     return prod_ts
 

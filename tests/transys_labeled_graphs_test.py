@@ -3,7 +3,7 @@
 from nose.tools import raises, assert_raises
 from tulip.transys import labeled_graphs
 from tulip.transys.mathset import PowerSet, MathSet
-from tulip.transys.transys import FTS
+from tulip.transys.transys import TransitionSystem as FTS
 
 
 def str2singleton_test():

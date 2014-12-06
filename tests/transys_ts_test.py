@@ -8,7 +8,7 @@ from tulip.transys.mathset import MathSet, PowerSet
 
 
 def ts_test():
-    ts = trs.FTS()
+    ts = trs.TransitionSystem()
 
     ts.states.add('s0')
     assert('s0' in ts)

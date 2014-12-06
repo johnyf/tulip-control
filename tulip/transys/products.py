@@ -177,12 +177,12 @@ def ts_ba_sync_prod(transition_system, buchi_automaton):
         - C{persistent_states} are those in TS * BA which
             project on accepting states of BA.
     @rtype:
-        - C{product_TS} is a L{transys.FiniteTransitionSystem}
+        - C{product_TS} is a L{TransitionSystem}
         - C{persistent_states} is the set of states which project
             on accepting states of the Buchi Automaton BA.
     """
-    # if not hasattr(transition_system, FiniteTransitionSystem):
-    #    msg = 'transition_system not transys.FiniteTransitionSystem.\n'
+    # if not hasattr(transition_system, TransitionSystem):
+    #    msg = 'transition_system not transys.TransitionSystem.\n'
     #    msg += 'Actual type passed: ' +str(type(transition_system) )
     #    raise TypeError(msg)
 
@@ -201,7 +201,7 @@ def ts_ba_sync_prod(transition_system, buchi_automaton):
     ba = buchi_automaton
 
     prodts_name = fts.name + '*' + ba.name
-    prodts = transys.FiniteTransitionSystem()
+    prodts = transys.TransitionSystem()
     prodts.name = prodts_name
 
     prodts.atomic_propositions.add_from(ba.states())

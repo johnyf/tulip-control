@@ -35,7 +35,8 @@ import logging
 logger = logging.getLogger(__name__)
 import copy
 import warnings
-from tulip import transys
+from tulip.transys import TransitionSystem, MealyMachine
+from tulip.transys import machines
 from tulip.spec import GRSpec
 from tulip.interfaces import jtlv, gr1c
 
@@ -213,10 +214,10 @@ def iter2var(states, variables, statevar, bool_states, must):
     The int variable is allowed to take N+1 values.
     The additional value corresponds to all, e.g., actions, being False.
 
-    If FTS values are integers,
+    If TransitionSystem values are integers,
     then the additional action is an int value.
 
-    If FTS values are strings (e.g., 'park', 'wait'),
+    If TransitionSystem values are strings (e.g., 'park', 'wait'),
     then the additional action is 'none'.
     They are treated by C{spec} as an arbitrary finite domain.
 
@@ -339,9 +340,9 @@ def _fts2spec(
     statevar, actionvar=None,
     bool_states=False, bool_actions=False
 ):
-    """Convert closed FTS to GR(1) representation."""
+    """Convert closed L{TransitionSystem} to GR(1) representation."""
     raise Exception('deprecated')
-    assert isinstance(fts, transys.FiniteTransitionSystem)
+    assert isinstance(fts, TransitionSystem)
     aps = fts.aps
     states = fts.states
     actions = fts.actions
@@ -371,7 +372,7 @@ def sys_to_spec(
 ):
     """Convert transition system to GR(1) fragment of LTL.
 
-    The attribute C{FTS.owner} defines who controls the system,
+    The attribute C{TransitionSystem.owner} defines who controls the system,
     as described next. It can take values C{'env'} or C{'sys'}.
 
     The following are represented by variables controlled by C{ofts.owner}:
@@ -435,7 +436,7 @@ def sys_to_spec(
     @return: logic formula in GR(1) form representing C{ofts}.
     @rtype: L{GRSpec}
     """
-    if not isinstance(ofts, transys.FiniteTransitionSystem):
+    if not isinstance(ofts, TransitionSystem):
         raise TypeError('ofts must be FTS, got instead: ' + str(type(ofts)))
     assert ofts.owner == 'sys'
     aps = ofts.aps
@@ -514,7 +515,7 @@ def env_to_spec(
     ========
     L{sys_open_fts2spec}
     """
-    if not isinstance(ofts, transys.FiniteTransitionSystem):
+    if not isinstance(ofts, TransitionSystem):
         raise TypeError('ofts must be FTS, got instead: ' + str(type(ofts)))
     assert ofts.owner == 'env'
     aps = ofts.aps
@@ -962,7 +963,7 @@ def synthesize_many(specs, ts=None, ignore_init=None,
 
     @type specs: L{GRSpec}
 
-    @type ts: C{dict} of L{FiniteTransitionSystem}
+    @type ts: C{dict} of L{TransitionSystem}
 
     @type ignore_init: C{set} of keys from C{ts}
 
@@ -973,7 +974,7 @@ def synthesize_many(specs, ts=None, ignore_init=None,
     """
     assert isinstance(ts, dict)
     for name, t in ts.iteritems():
-        assert isinstance(t, transys.FiniteTransitionSystem)
+        assert isinstance(t, TransitionSystem)
         ignore = name in ignore_init
         bool_act = name in bool_actions
         statevar = name
@@ -997,7 +998,7 @@ def synthesize_many(specs, ts=None, ignore_init=None,
         logger.debug('No Mealy machine returned.')
     # no controller found ?
     # counterstrategy not constructed by synthesize
-    if not isinstance(ctrl, transys.MealyMachine):
+    if not isinstance(ctrl, MealyMachine):
         return None
     ctrl.remove_deadends()
     return ctrl
@@ -1041,7 +1042,7 @@ def synthesize(
 
         This constrains the transitions available to
         the environment, given the outputs from the system.
-    @type env: L{FTS}
+    @type env: L{TransitionSystem}
 
     @param sys: A transition system describing the system:
 
@@ -1050,7 +1051,7 @@ def synthesize(
             - output: sys_actions
             - initial states constrain the system
 
-    @type sys: L{FTS}
+    @type sys: L{TransitionSystem}
 
     @param ignore_sys_init: Ignore any initial state information
         contained in env.
@@ -1101,7 +1102,7 @@ def synthesize(
     # no controller found ?
     # exploring unrealizability with counterexamples or other means
     # can be done by calling a dedicated other function, not this
-    if not isinstance(ctrl, transys.MealyMachine):
+    if not isinstance(ctrl, MealyMachine):
         return None
     if rm_deadends:
         ctrl.remove_deadends()
@@ -1193,10 +1194,10 @@ def strategy2mealy(A, spec):
     logger.info('converting strategy (compact) to Mealy machine')
     env_vars = spec.env_vars
     sys_vars = spec.sys_vars
-    mach = transys.MealyMachine()
-    inputs = transys.machines.create_machine_ports(env_vars)
+    mach = MealyMachine()
+    inputs = machines.create_machine_ports(env_vars)
     mach.add_inputs(inputs)
-    outputs = transys.machines.create_machine_ports(sys_vars)
+    outputs = machines.create_machine_ports(sys_vars)
     mach.add_outputs(outputs)
     str_vars = {
         k: v for k, v in env_vars.iteritems()
