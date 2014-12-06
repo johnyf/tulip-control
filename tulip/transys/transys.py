@@ -469,10 +469,6 @@ class TransitionSystem(LabeledDiGraph):
         return True
 
 
-class FTS(FiniteTransitionSystem):
-    """Alias to L{FiniteTransitionSystem}."""
-
-
 def tuple2fts(S, S0, AP, L, Act, trans, name='fts',
               prepend_str=None):
     """Create a Finite Transition System from a tuple of fields.
