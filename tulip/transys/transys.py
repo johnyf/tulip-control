@@ -108,7 +108,7 @@ class KripkeStructure(LabeledDiGraph):
         return s
 
 
-class FiniteTransitionSystem(LabeledDiGraph):
+class TransitionSystem(LabeledDiGraph):
     """Kripke structure with labeled states and edges.
 
     Who controls the state
@@ -116,7 +116,7 @@ class FiniteTransitionSystem(LabeledDiGraph):
     To define who "moves the token" between vertices in
     the graph, set the attribute:
 
-    >>> g = FiniteTransitionSystem()
+    >>> g = TransitionSystem()
     >>> g.owner = 'sys'
 
     This means that when there are more than one transition
@@ -229,7 +229,7 @@ class FiniteTransitionSystem(LabeledDiGraph):
     First create an empty transition system and add some states to it:
 
     >>> from tulip import transys as trs
-    >>> ts = trs.FiniteTransitionSystem()
+    >>> ts = trs.TransitionSystem()
     >>> ts.states.add('s0')
     >>> ts.states.add_from(['s1', 's3', 'end', 5] )
 
@@ -356,7 +356,7 @@ class FiniteTransitionSystem(LabeledDiGraph):
              'values': ap_labels,
              'setter': ap_labels.math_set,
              'default': set()}]
-        super(FiniteTransitionSystem, self).__init__(
+        super(TransitionSystem, self).__init__(
             node_label_types, edge_label_types)
         # make them available also via an "actions" dicts
         # name, codomain, *rest = x
@@ -563,7 +563,7 @@ def tuple2fts(S, S0, AP, L, Act, trans, name='fts',
     states = prepend_with(states, prepend_str)
     initial_states = prepend_with(initial_states, prepend_str)
 
-    ts = FTS()
+    ts = TransitionSystem()
     ts.name = name
 
     ts.states.add_from(states)
@@ -687,7 +687,7 @@ def add_initial_states(ts, ap_labels):
       >>> initial_labels = [{'home'}]
       >>> add_initial_states(ofts, initial_labels)
 
-    @type ts: L{FiniteTransitionSystem}
+    @type ts: L{TransitionSystem}
 
     @param ap_labels: labels, each comprised of atomic propositions
     @type ap_labels: iterable of sets of elements from
