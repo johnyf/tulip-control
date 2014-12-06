@@ -29,7 +29,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
-"""TuLiP Toolbox Transition System subpackage
+#
+"""Transition System subpackage
 
 Suggested abbreviation:
 
@@ -39,18 +40,9 @@ from __future__ import absolute_import
 from .mathset import MathSet, SubSet, PowerSet, TypedDict
 from .labeled_graphs import prepend_with
 from .transys import (
-    KripkeStructure, FiniteTransitionSystem, FTS,
-    LabeledGameGraph,
-    tuple2fts, line_labeled_with, cycle_labeled_with
-)
-
-from .automata import (
-    BuchiAutomaton, BA, tuple2ba,
-    RabinAutomaton, DRA,
-    ParityGame
-)
-
-
+    KripkeStructure, TransitionSystem, LabeledGameGraph,
+    tuple2fts, line_labeled_with, cycle_labeled_with)
+from .automata import Automaton, tuple2ba, ParityGame
 from .machines import MooreMachine, MealyMachine
 
 from .products import OnTheFlyProductAutomaton

@@ -40,7 +40,7 @@ from tulip.transys import automata
 _hl = 40 * '-'
 
 
-class OnTheFlyProductAutomaton(automata.BuchiAutomaton):
+class OnTheFlyProductAutomaton(automata.Automaton):
     """Dynamically extends itself by adding successors.
 
     Note that performs on-the-fly BA * TS.
@@ -98,7 +98,7 @@ class OnTheFlyProductAutomaton(automata.BuchiAutomaton):
                     self.states.initial.add(new_sq0)
 
                     # accepting state ?
-                    if q in ba.states.accepting:
+                    if q in ba.accepting_sets:
                         self.states.accepting.add(new_sq0)
 
     def add_successors(self, s, q):
@@ -187,15 +187,9 @@ def ts_ba_sync_prod(transition_system, buchi_automaton):
     #    raise TypeError(msg)
 
     if not hasattr(buchi_automaton, 'alphabet'):
-        msg = 'transition_system not transys.BuchiAutomaton.\n'
+        msg = 'transition_system not transys.Automaton.\n'
         msg += 'Actual type passed: ' + str(type(buchi_automaton))
         raise TypeError(msg)
-
-    if not buchi_automaton.atomic_proposition_based:
-        msg = """Buchi automaton not stored as Atomic Proposition-based.
-                synchronous product with Finite Transition System
-                is not well-defined."""
-        raise Exception(msg)
 
     fts = transition_system
     ba = buchi_automaton
@@ -242,7 +236,7 @@ def ts_ba_sync_prod(transition_system, buchi_automaton):
                 prodts.states[new_sq0]['ap'] = {q}
 
                 # accepting state ?
-                if q in ba.states.accepting:
+                if q in ba.accepting_sets:
                     accepting_states_preimage.add(new_sq0)
 
     # start visiting reachable in DFS or BFS way
@@ -292,13 +286,13 @@ def find_ba_succ(prev_q, next_s, fts, ba):
             'No AP label for FTS state: ' + str(next_s) +
             '\n Did you forget labeing it ?')
 
-    Sigma_dict = {'letter': ap}
+    Sigma_dict = {'guard': ap}
     logger.debug("Next state's label:\t" + str(ap))
 
     enabled_ba_trans = ba.transitions.find(
         [q], with_attr_dict=Sigma_dict)
     enabled_ba_trans += ba.transitions.find(
-        [q], letter={True})
+        [q], guard={True})
     logger.debug('Enabled BA transitions:\n\t' +
                  str(enabled_ba_trans))
 
@@ -330,7 +324,7 @@ def find_prod_succ(prev_sq, next_s, enabled_ba_trans, product, ba, fts):
             product.states[new_sq]['ap'] = {next_q}
 
         # accepting state ?
-        if next_q in ba.states.accepting:
+        if next_q in ba.accepting_sets:
             new_accepting.add(new_sq)
             logger.debug(str(new_sq) +
                          ' contains an accepting state.')
@@ -353,7 +347,7 @@ def find_prod_succ(prev_sq, next_s, enabled_ba_trans, product, ba, fts):
             if hasattr(product, 'alphabet'):
                 product.transitions.add(
                     prev_sq, new_sq,
-                    letter=fts.states[to_s]['ap'])
+                    guard=fts.states[to_s]['ap'])
             elif hasattr(product, 'actions'):
                 if not sublabel_values:
                     product.transitions.add(prev_sq, new_sq)
@@ -371,7 +365,7 @@ def ba_ts_sync_prod(buchi_automaton, transition_system):
     ========
     L{ts_ba_sync_prod}, L{sync_prod}
 
-    @return: C{prod_ba}, the product L{BuchiAutomaton}.
+    @return: C{prod_ba}, the product L{Automaton}.
     """
     logger.debug('\n' + _hl + '\n'
                  'Product: BA * TS' +
@@ -382,7 +376,7 @@ def ba_ts_sync_prod(buchi_automaton, transition_system):
 
     prod_name = buchi_automaton.name + '*' + transition_system.name
 
-    prod_ba = automata.BuchiAutomaton()
+    prod_ba = automata.Automaton()
     prod_ba.name = prod_name
 
     # copy S, S0, from prod_TS-> prod_BA
@@ -390,15 +384,10 @@ def ba_ts_sync_prod(buchi_automaton, transition_system):
     prod_ba.states.initial |= set(prod_ts.states.initial)
 
     # accepting states = persistent set
-    prod_ba.states.accepting |= persistent
+    prod_ba.accepting_sets |= persistent
 
     # copy edges, translating transitions,
     # i.e., changing transition labels
-    if not buchi_automaton.atomic_proposition_based:
-        msg = (
-            'Buchi Automaton must be Atomic Proposition-based,'
-            ' otherwise the synchronous product is not well-defined.')
-        raise Exception(msg)
 
     # direct access, not the inefficient
     #   prod_ba.alphabet.add_from(buchi_automaton.alphabet() ),
@@ -417,5 +406,5 @@ def ba_ts_sync_prod(buchi_automaton, transition_system):
         (ts_to_state_, transition_label_dict) = state_label_pairs[0]
         transition_label_value = transition_label_dict['ap']
         prod_ba.transitions.add(
-            from_state, to_state, letter=transition_label_value)
+            from_state, to_state, guard=transition_label_value)
     return prod_ba

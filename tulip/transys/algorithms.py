@@ -35,11 +35,9 @@ logger = logging.getLogger(__name__)
 import copy
 import networkx as nx
 from tulip.interfaces import ltl2ba as ltl2baint
-# possible future:
-# from tulip.transys.transys import TransitionSystem
-# from tulip.transys.automata import Automaton
-from tulip.transys.labeled_graphs import LabeledDiGraph
 from tulip.transys.transys import TransitionSystem
+from tulip.transys.automata import Automaton
+from tulip.transys.labeled_graphs import LabeledDiGraph
 
 
 _hl = 40 * '-'
@@ -129,13 +127,13 @@ def _multiply_mutable_states(self, other, prod_graph, prod_sys):
 
     # action labeling is taken care by nx,
     # since transition taken at a time
-    for from_state_id, to_state_id, edge_dict in prod_graph.edges_iter(data=True):
+    for from_state_id, to_state_id, edge_dict in \
+        prod_graph.edges_iter(data=True):
+            from_state = prod_ids2states(from_state_id, self, other)
+            to_state = prod_ids2states(to_state_id, self, other)
 
-        from_state = prod_ids2states(from_state_id, self, other)
-        to_state = prod_ids2states(to_state_id, self, other)
-
-        prod_sys.transitions.add(
-            from_state, to_state, **edge_dict)
+            prod_sys.transitions.add(
+                from_state, to_state, **edge_dict)
     return prod_sys
 
 
@@ -303,7 +301,7 @@ def sync_prod(ts, ba):
     @return: synchronous product C{self} x C{ts_or_ba}
     @rtype: L{TransitionSystem}
     """
-    if not isinstance(ba, BuchiAutomaton):
+    if not isinstance(ba, Automaton):
         raise Exception
     if not isinstance(ts, TransitionSystem):
         raise Exception
