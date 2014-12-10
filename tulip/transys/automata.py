@@ -61,43 +61,43 @@ class Automaton(LabeledDiGraph):
     Attributes
     ==========
     Besides initial nodes
-    (from L{LabeledDiGraph} - to be split and renamed),
-    an L{Automaton} has the attributes:
+    (from [`LabeledDiGraph`] - to be split and renamed),
+    an [`Automaton`] has the attributes:
 
-      - C{universal_nodes} is a subset of nodes.
+      - `"universal_nodes"` is a subset of nodes.
         Remaining nodes are existentially quantified.
 
 
-      - C{acceptance} that can be:
+      - `"acceptance"` that can be:
 
-        - C{'finite'}, signifying finite words or trees
-        - C{'Buchi'} (or C{'weak Buchi'})
-        - C{'coBuchi'}
-        - C{'generalized Buchi'}
-        - C{'Rabin'}
-        - C{'Streett'}
-        - C{'Muller'}
-        - C{'parity'}
+        - `"finite"`, signifying finite words or trees
+        - `"Buchi"` (or `"weak Buchi"`)
+        - `"coBuchi"`
+        - `"generalized Buchi"`
+        - `"Rabin"`
+        - `"Streett"`
+        - `"Muller"`
+        - `"parity"`
 
 
-      - C{accepting_sets} that contains the sets of nodes defining
+      - `"accepting_sets"` that contains the sets of nodes defining
         the acceptance condition:
 
-        - C{set} of nodes for (weak/co-) Buchi and finite
+        - `set` of nodes for (weak/co-) Buchi and finite
           For co-Buchi this is the avoidance set (FG!)
-        - C{list} of C{dict}s of C{set}s of nodes for Rabin and Streett
-          The keys should be: 'GF' and 'FG!',
-        - C{list} of C{set}s of nodes for Muller and generalized Buchi,
-        - a 2-C{tuple} of (min, max) colors for parity
+        - `list` of `dict`s of `set`s of nodes for Rabin and Streett
+          The keys should be: `"GF"` and `"FG!"`,
+        - `list` of `set`s of nodes for Muller and generalized Buchi,
+        - a 2-`tuple` of (min, max) colors for parity
           The coloring function is defined by directly annotating the nodes.
 
         For convenience, the above are initialized so that
         the automaton represent an empty language.
         The user is responsible for adhering to the above conventions.
 
-        To check compliance to the above, call L{Automaton.check_sanity}.
+        To check compliance to the above, call [`Automaton.check_sanity`].
 
-        Deprecated: Note that by using C{SubSet(automaton)} for each set,
+        Deprecated: Note that by using `SubSet(automaton)` for each set,
         you can ensure consistency if more nodes are added later.
         Alternatively, write a function that checks consistency of
         each acceptance condition wrt the automaton's nodes.
@@ -112,7 +112,7 @@ class Automaton(LabeledDiGraph):
         If `directions` is `None`, then the automaton recognizes words.
 
 
-      - C{guards} defines the representation of edge labels and can be:
+      - `guards` defines the representation of edge labels and can be:
 
         - C{'boolean'} meaning that each edge is annotated with
           a Boolean formula as C{str}. (Typically a conjunction.)
@@ -127,17 +127,17 @@ class Automaton(LabeledDiGraph):
     because its generation requires solving a search problem.
 
     If you want to represent a language constructively,
-    then use a L{KripkeStructure} instead.
+    then use a [`KripkeStructure`] instead.
     That is equivalent to a universal Buchi acceptor
     whose nodes are all accepting.
 
-    To represent transductions use a L{Transducer}.
+    To represent transductions use a [`Transducer`].
 
 
     Remark
     ======
-    In C{ltl2dstar} documentation L denotes a "good" set.
-    To avoid ambiguity, C{dict}s with explicit modalities are used as labels.
+    In `ltl2dstar` documentation L denotes a "good" set.
+    To avoid ambiguity, `dict`s with explicit modalities are used as labels.
 
 
     References
@@ -149,7 +149,7 @@ class Automaton(LabeledDiGraph):
 
     See also
     ========
-    L{KripkeStructure}, L{Transducer}
+    [`KripkeStructure`], [`Transducer`]
     """
 
     def __init__(self, acceptance='Buchi', alphabet=None,
