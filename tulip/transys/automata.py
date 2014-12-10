@@ -169,6 +169,7 @@ class Automaton(LabeledDiGraph):
         alphabet = alphabet
         self.alphabet = alphabet
         self.directions = directions
+        # explicit is better than implicit
         self.guards = guards
         # type checking for edge labeling
         edge_label_types = [
@@ -188,10 +189,10 @@ class Automaton(LabeledDiGraph):
 
     def __str__(self):
         show_node_data = (self.acceptance == 'parity')
-        word_tree = (self.directions is None or len(self.directions) <= 1)
+        is_unary = (self.directions is None or len(self.directions) <= 1)
         f = lambda x: pformat(x, indent=3)
         s = (
-            '{hl}\n Alternating {acceptance} {word_tree} automaton\n'
+            '{hl}\n Alternating {self.acceptance} {word_tree} automaton\n'
             '{hl}\n'
             'Alphabet:\n'
             '{self.alphabet}\n\n'
@@ -209,9 +210,8 @@ class Automaton(LabeledDiGraph):
             'Edges with guards:\n'
             '{edges}\n{hl}\n').format(
                 hl=40 * '-',
-                acceptance=self.acceptance,
-                word_tree=word_tree,
                 self=self,
+                word_tree='word' if is_unary else 'tree',
                 nodes=f(self.nodes(data=show_node_data)),
                 init_nodes=f(self.states.initial),
                 universal_nodes=f(self.universal_nodes),
@@ -220,6 +220,7 @@ class Automaton(LabeledDiGraph):
         return s
 
     def _init_accepting_sets(self, acceptance):
+        """Return a `set`, `list` or other, depending on acceptance type."""
         if acceptance in {'finite', 'Buchi', 'coBuchi', 'weak Buchi'}:
             a = set()
         elif acceptance in {'Muller', 'generalized Buchi', 'Rabin', 'Streett'}:
@@ -231,6 +232,7 @@ class Automaton(LabeledDiGraph):
         return a
 
     def check_sanity(self):
+        """Return `True` if conformant to conventions."""
         a = self.acceptance
         s = self.accepting_sets
         f = lambda x: all(u in self for u in x)
@@ -320,8 +322,6 @@ def tuple2ba(S, S0, Sa, Sigma_or_AP, trans, name='ba', prepend_str=None,
             guard = str2singleton(guard)
         ba.transitions.add(from_state, to_state, letter=guard)
     return ba
-
-
 
 
 class ParityGame(GameGraph):
