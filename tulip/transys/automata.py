@@ -114,9 +114,10 @@ class Automaton(LabeledDiGraph):
 
       - `guards` defines the representation of edge labels and can be:
 
-        - C{'boolean'} meaning that each edge is annotated with
-          a Boolean formula as C{str}. (Typically a conjunction.)
-        - C{'explicit'} meaning that each edge is annotated with a letter.
+        - `"formula"` meaning that each edge is annotated with
+          a Boolean formula as `str` or AST. (Typically a conjunction.)
+        - `"enumeration"` meaning that each edge is annotated with a letter,
+          as `set` or `dict` (closed world semantics).
 
 
     Related concepts
