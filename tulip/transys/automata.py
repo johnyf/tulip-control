@@ -37,7 +37,6 @@ from collections import Iterable
 from pprint import pformat
 from tulip.transys.labeled_graphs import (
     LabeledDiGraph, str2singleton, prepend_with)
-from tulip.transys.mathset import PowerSet
 from tulip.transys.transys import GameGraph
 
 
@@ -104,14 +103,13 @@ class Automaton(LabeledDiGraph):
         each acceptance condition wrt the automaton's nodes.
 
 
-      - C{alphabet} contains letters labeling edges from existential nodes.
-        Letters fed to the automaton are objects explicitly represented.
-        It is a L{PowerSet} of 0-ary predicates (atomic propositions).
+      - `alphabet`: `dict` mapping from symbols to domains.
+        Invariants of existential nodes are models or
+        formulae over `alphabet`.
 
 
-      - C{directions} contains elements labeling edges from universal nodes.
-        It is a L{PowerSet} of 0-ary predicates.
-        If C{directions} is C{None}, then the automaton recognizes words.
+      - `directions`: Like `alphabet`, but for universal nodes.
+        If `directions` is `None`, then the automaton recognizes words.
 
 
       - C{guards} defines the representation of edge labels and can be:
@@ -154,25 +152,25 @@ class Automaton(LabeledDiGraph):
     L{KripkeStructure}, L{Transducer}
     """
 
-    def __init__(self, acceptance='Buchi', propositions=None,
+    def __init__(self, acceptance='Buchi', alphabet=None,
                  directions=None, universal_nodes=None, guards='boolean'):
         if universal_nodes is None:
             universal_nodes = set()
-        if propositions is None:
-            propositions = set()
+        if alphabet is None:
+            alphabet = dict()
         # init attributes
         self.universal_nodes = universal_nodes
         self.acceptance = acceptance
         self.accepting_sets = self._init_accepting_sets(acceptance)
         # default: powerset alphabet
-        alphabet = PowerSet(propositions)
+        alphabet = alphabet
         self.alphabet = alphabet
         self.directions = directions
         self.guards = guards
         # type checking for edge labeling
         edge_label_types = [
             {'name': 'guard',
-             'values': alphabet,
+             'values': None,
              'setter': True}]
         super(Automaton, self).__init__(edge_label_types=edge_label_types)
         # formatting options
@@ -192,6 +190,10 @@ class Automaton(LabeledDiGraph):
         s = (
             '{hl}\n Alternating {acceptance} {word_tree} automaton\n'
             '{hl}\n'
+            'Alphabet:\n'
+            '{self.alphabet}\n\n'
+            'Directions:\n'
+            '{self.directions}\n\n'
             'Nodes:\n'
             '{nodes}\n\n'
             'Initial nodes:\n'
@@ -206,6 +208,7 @@ class Automaton(LabeledDiGraph):
                 hl=40 * '-',
                 acceptance=self.acceptance,
                 word_tree=word_tree,
+                self=self,
                 nodes=f(self.nodes(data=show_node_data)),
                 init_nodes=f(self.states.initial),
                 universal_nodes=f(self.universal_nodes),
