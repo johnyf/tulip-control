@@ -143,6 +143,8 @@ class Automaton(LabeledDiGraph):
 
     References
     ==========
+    - Orna Kupferman and Moshe Vardi,
+      "Safraless decision procedures", FOCS'05, pp.531--542
     - Def. 10.53, p.801, U{[BK08]
       <http://tulip-control.sourceforge.net/doc/bibliography.html#bk08>}
     - U{ltl2dstar<http://ltl2dstar.de/>} documentation
