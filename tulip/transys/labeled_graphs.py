@@ -48,54 +48,6 @@ from tulip.transys.mathset import SubSet, TypedDict
 # from tulip.transys.export import graph2dot
 
 
-def label_is_desired(attr_dict, desired_dict):
-    """Return True if all labels match.
-
-    Supports symbolic evaluation, if label type is callable.
-    """
-    if not isinstance(attr_dict, TypedDict):
-        raise Exception('attr_dict must be TypedDict' +
-                        ', instead: ' + str(type(attr_dict)))
-    if attr_dict == desired_dict:
-        return True
-    # different keys ?
-    mismatched_keys = set(attr_dict).symmetric_difference(desired_dict)
-    if mismatched_keys:
-        return False
-    # any labels have symbolic semantics ?
-    label_def = attr_dict.allowed_values
-    for type_name, value in attr_dict.iteritems():
-        logger.debug('Checking label type:\n\t' + str(type_name))
-        type_def = label_def[type_name]
-        desired_value = desired_dict[type_name]
-        if hasattr(type_def, '__call__'):
-            logger.debug('Found label semantics:\n\t' + str(type_def))
-            # value = guard
-            if not type_def(value, desired_value):
-                return False
-            else:
-                continue
-        # no guard semantics given,
-        # then by convention: guard is singleton {cur_val},
-        if not value == desired_value:
-            test_common_bug(value, desired_value)
-            return False
-    return True
-
-
-def test_common_bug(value, desired_value):
-    logger.debug('Label value:\n\t' + str(value))
-    logger.debug('Desired value:\n\t' + str(desired_value))
-    if (
-        isinstance(value, (set, list)) and
-        isinstance(desired_value, (set, list)) and
-        value.__class__ != desired_value.__class__
-    ):
-        msg = (
-            'Set SubLabel:\n\t' + str(value) +
-            'compared to list SubLabel:\n\t' + str(desired_value) +
-            'Did you mix sets & lists when setting AP labels ?')
-        raise Exception(msg)
 
 
 class States(object):
