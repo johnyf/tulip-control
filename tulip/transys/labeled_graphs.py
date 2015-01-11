@@ -34,12 +34,7 @@ from __future__ import absolute_import
 import logging
 logger = logging.getLogger(__name__)
 import os
-import copy
-from pprint import pformat
-from collections import Iterable
-import warnings
 import networkx as nx
-from tulip.transys.mathset import SubSet, TypedDict
 
 # inline imports:
 #
