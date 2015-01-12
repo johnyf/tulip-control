@@ -34,7 +34,7 @@ from __future__ import absolute_import
 import copy
 from pprint import pformat
 from random import choice
-from tulip.transys.labeled_graphs import LabeledDiGraph
+from tulip.transys.labeled_graphs import SystemGraph
 
 # inline imports:
 #
@@ -81,7 +81,7 @@ def create_machine_ports(spc_vars):
     return ports
 
 
-class Transducer(LabeledDiGraph):
+class Transducer(SystemGraph):
     """Sequential Transducer, i.e., a letter-to-letter function.
 
     Inputs
@@ -154,7 +154,7 @@ class Transducer(LabeledDiGraph):
         by code, so the benefits of typedefs will be
         considerable compared to the required coding effort.
 
-    Guards annotate transitions::
+    Guards annotate edges::
 
       Guards: States x States ---> Input_Predicates
 
@@ -162,8 +162,8 @@ class Transducer(LabeledDiGraph):
     =======
     Similarly defined to inputs, but:
 
-      - for Mealy Machines they annotate transitions
-      - for Moore Machines they annotate states
+      - for Mealy Machines they annotate edges
+      - for Moore Machines they annotate nodes
 
     State Variables
     ===============
@@ -215,6 +215,7 @@ class Transducer(LabeledDiGraph):
         self.inputs = dict()
         self.outputs = dict()
         # self.set_actions = {}
+        super(Transducer, self).__init__()
 
         # state labeling
         self._state_label_def = dict()
@@ -229,8 +230,6 @@ class Transducer(LabeledDiGraph):
         self._state_dot_mask = dict()
 
         self.default_export_fname = 'fsm'
-
-        LabeledDiGraph.__init__(self)
 
         self.dot_node_shape = {'normal': 'ellipse'}
         self.default_export_fname = 'fsm'
