@@ -96,11 +96,11 @@ def transition_directions_test():
              (5, 0)}
 
     logger.debug(set(ts.edges()).symmetric_difference(edges))
-    assert(set(ts.edges()) == edges)
+    assert set(ts.edges()) == edges
 
     ts = swab.ts
 
-    assert(set(ts.edges()) == edges)
+    assert set(ts.edges()) == edges
     for i, j in edges:
         assert(ts[i][j][0]['env_actions'] == 'normal')
         assert(ts[i][j][0]['sys_actions'] == 'fly')

@@ -37,6 +37,7 @@ import warnings
 from tulip.transys import transys
 from tulip.transys import automata
 
+
 _hl = 40 * '-'
 
 

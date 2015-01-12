@@ -45,10 +45,8 @@ reference
    http://doi.org/10.4204/EPTCS.50.3
 """
 from __future__ import absolute_import
-
 import logging
 logger = logging.getLogger(__name__)
-
 from tulip import transys as trs
 from tulip.spec import lexyacc, GRSpec
 from tulip.spec import transformation as tx
@@ -56,8 +54,7 @@ from tulip.spec import ast as sast
 
 
 def check(formula):
-    """Parse formula string and create abstract syntax tree (AST).
-    """
+    """Parse formula string and create abstract syntax tree (AST)."""
     ast = lexyacc.parse(formula)
     nodes = {'gf', 'fg', 'g', 'f'}
     dfa.add_nodes_from(nodes)
