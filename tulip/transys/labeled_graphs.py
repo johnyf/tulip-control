@@ -347,3 +347,14 @@ def add_adj(g, adj, adj2states, **attr):
         u = adj2states[i]
         v = adj2states[j]
         g.add_edge(u, v, **attr)
+
+
+def check_value(v, dom):
+    if isinstance(dom, (set, list)):
+        assert v in dom
+    elif dom in {'bool', 'boolean'}:
+        assert v in {0, 1, False, True}
+    elif isinstance(dom, tuple):
+        assert dom[0] <= int(v) <= dom[1]
+    else:
+        raise TypeError('dom not a `set` or `tuple` or "bool".')
