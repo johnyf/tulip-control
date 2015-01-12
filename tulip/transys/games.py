@@ -36,7 +36,7 @@ import networkx as nx
 
 
 class GameGraph(nx.MultiDiGraph):
-    """Store a game graph.
+    """A labeled game graph with parity winning condition.
 
     When adding states, you have to say
     which player controls the outgoing transitions.
@@ -45,24 +45,32 @@ class GameGraph(nx.MultiDiGraph):
       >>> g = GameGraph()
       >>> g.add_node('s0', player=0, color=2)
 
-    See also
-    ========
-    L{automata.ParityGame}
 
     Reference
     =========
     1. Chatterjee K.; Henzinger T.A.; Jobstmann B.
        Environment Assumptions for Synthesis
        CONCUR'08, LNCS 5201, pp. 147-161, 2008
+
+    2. Chatterjee K.; Henzinger T.A.; Piterman N.
+       Strategy Logic
+       UCB/EECS-2007-78
     """
 
-    def __init__(self, node_label_types, edge_label_types):
-        node_label_types += [{
-            'name': 'player',
-            'values': {0, 1},
-            'default': 0}]
-        super(GameGraph, self).__init__(node_label_types,
-                                        edge_label_types)
+    def __init__(self):
+        super(GameGraph, self).__init__()
+        self.colors = None
+
+    def __str__(self):
+        s = (
+            'Parity Game\n'
+            '-----------\n'
+            'n: node, p: player, c: color\n\n')
+        for node, attr in self.nodes_iter(data=True):
+            s += 'nd = {node}, p = {player}, c = {color}\n'.format(
+                npde=node, player=attr['player'], color=attr['color'])
+        s += '\n{t}'.format(t=self.edges())
+        return s
 
     def player_states(self, n):
         """Return states controlled by player C{n}.
@@ -85,80 +93,15 @@ class GameGraph(nx.MultiDiGraph):
 
         @rtype: integer 0 or 1
         """
-        from_state = e[0]
-        return self.node[from_state]['player']
+        u = e[0]
+        return self.node[u]['player']
 
-
-class LabeledGameGraph(GameGraph):
-    """Game graph with labeled states.
-
-    Its contraction is a Kripke structure.
-    Given a Kripke structure and a partition of propositions,
-    then the corresponding labeled game graph
-    can be obtained by graph expansion.
-
-    Reference
-    =========
-    1. Chatterjee K.; Henzinger T.A.; Piterman N.
-       Strategy Logic
-       UCB/EECS-2007-78
-    """
-
-    def __init__(self):
-        ap_labels = PowerSet()
-        node_label_types = [
-            {'name': 'ap',
-             'values': ap_labels,
-             'setter': ap_labels.math_set,
-             'default': set()}]
-        super(LabeledGameGraph, self).__init__(node_label_types)
-        self.atomic_propositions = self.ap
-        # dot formatting
-        self._state_dot_label_format = {
-            'ap': '',
-            'type?label': '',
-            'separator': '\n'}
-        self.dot_node_shape = {'normal': 'rectangle'}
-
-
-class ParityGame(GameGraph):
-    """GameGraph with coloring.
-
-    To define the number of colors C{c}:
-
-    >>> p = ParityGame(c=4)
-
-    Note that the colors are: 0, 1, ..., c-1
-
-    See also
-    ========
-    L{transys.GameGraph}
-    """
-
-    def __init__(self, c=2):
-        node_label_types = [{
-            'name': 'color',
-            'values': range(c),
-            'default': 0}]
-        super(ParityGame, self).__init__(node_label_types, [])
-
-    def __str__(self):
-        s = (
-            'Parity Game\n'
-            '-----------\n'
-            'n: node, p: player, c: color\n\n')
-        for node, attr in self.states(data=True):
-            s += 'nd = {node}, p = {player}, c = {color}\n'.format(
-                npde=node, player=attr['player'], color=attr['color'])
-        s += '\n{t}'.format(t=self.transitions)
-        return s
+    def to_pydot(self):
+        pass
 
     @property
     def max_color(self):
-        max_c = -1
-        # node = None
-        for x in self:
-            if self.node[x]['color'] > max_c:
-                max_c = self.node[x]['color']
-                # node = x
-        return max_c
+        c = -1
+        for u, d in self.nodes_iter(data=True):
+            c = max(c, d['color'])
+        return c
