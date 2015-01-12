@@ -7,7 +7,7 @@ def rabin_test():
     dra = trs.Automaton(acceptance='Rabin')
     print(dra)
 
-    dra.states.add_from(xrange(10))
+    dra.add_nodes_from(xrange(10))
     dra.accepting_sets.append({'[]<>': {1, 2}, '<>[]!': {3, 4}})
 
     assert isinstance(dra.accepting_sets, list)

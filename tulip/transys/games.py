@@ -43,7 +43,7 @@ class GameGraph(nx.MultiDiGraph):
     Use C{networkx} state labels for that:
 
       >>> g = GameGraph()
-      >>> g.states.add('s0', player=0)
+      >>> g.add_node('s0', player=0, color=2)
 
     See also
     ========

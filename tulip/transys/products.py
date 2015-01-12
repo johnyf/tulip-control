@@ -65,8 +65,8 @@ class OnTheFlyProductAutomaton(automata.Automaton):
     def _add_initial(self):
         ts = self.ts
         ba = self.ba
-        s0s = set(ts.states.initial)
-        q0s = set(ba.states.initial)
+        s0s = set(ts.initial_nodes)
+        q0s = set(ba.initial_nodes)
 
         logger.debug('\n' + _hl + '\n' +
                      ' Product BA construction:' +
@@ -94,8 +94,8 @@ class OnTheFlyProductAutomaton(automata.Automaton):
                 for (curq0, q, sublabels) in enabled_ba_trans:
                     new_sq0 = (s0, q)
 
-                    self.states.add(new_sq0)
-                    self.states.initial.add(new_sq0)
+                    self.add_node(new_sq0)
+                    self.initial_nodes.add(new_sq0)
 
                     # accepting state ?
                     if q in ba.accepting_sets:
@@ -118,7 +118,7 @@ class OnTheFlyProductAutomaton(automata.Automaton):
                      ' product state:\t' + str(sq))
 
         # get next states
-        next_ss = ts.states.post(s)
+        next_ss = ts.successors(s)
         next_sqs = set()
         for next_s in next_ss:
             enabled_ba_trans = find_ba_succ(q, next_s, ts, ba)
@@ -147,7 +147,7 @@ class OnTheFlyProductAutomaton(automata.Automaton):
         In other words until the state space
         reaches a fixed point.
         """
-        Q = set(self.states)
+        Q = set(self)
         while Q:
             Qnew = set()
             for sq in Q:
@@ -202,8 +202,8 @@ def ts_ba_sync_prod(transition_system, buchi_automaton):
     prodts.sys_actions.add_from(fts.actions)
 
     # construct initial states of product automaton
-    s0s = set(fts.states.initial)
-    q0s = set(ba.states.initial)
+    s0s = set(fts.initial_nodes)
+    q0s = set(ba.initial_nodes)
 
     accepting_states_preimage = set()
 
@@ -231,9 +231,9 @@ def ts_ba_sync_prod(transition_system, buchi_automaton):
             # which q next ?     (note: curq0 = q0)
             for (curq0, q, sublabels) in enabled_ba_trans:
                 new_sq0 = (s0, q)
-                prodts.states.add(new_sq0)
-                prodts.states.initial.add(new_sq0)
-                prodts.states[new_sq0]['ap'] = {q}
+                prodts.add_node(new_sq0)
+                prodts.initial_nodes.add(new_sq0)
+                prodts.node[new_sq0]['ap'] = {q}
 
                 # accepting state ?
                 if q in ba.accepting_sets:
@@ -241,7 +241,7 @@ def ts_ba_sync_prod(transition_system, buchi_automaton):
 
     # start visiting reachable in DFS or BFS way
     # (doesn't matter if we are going to store the result)
-    queue = set(prodts.states.initial)
+    queue = set(prodts.initial_nodes)
     visited = set()
     while queue:
         sq = queue.pop()
@@ -251,7 +251,7 @@ def ts_ba_sync_prod(transition_system, buchi_automaton):
         logger.debug('Current product state:\t' + str(sq))
 
         # get next states
-        next_ss = fts.states.post(s)
+        next_ss = fts.successors(s)
         next_sqs = set()
         for next_s in next_ss:
             enabled_ba_trans = find_ba_succ(q, next_s, fts, ba)
@@ -316,12 +316,12 @@ def find_prod_succ(prev_sq, next_s, enabled_ba_trans, product, ba, fts):
 
         if new_sq not in product:
             next_sqs.add(new_sq)
-            product.states.add(new_sq)
+            product.add_node(new_sq)
 
             logger.debug('Adding state:\t' + str(new_sq))
 
         if hasattr(product, 'actions'):
-            product.states[new_sq]['ap'] = {next_q}
+            product.node[new_sq]['ap'] = {next_q}
 
         # accepting state ?
         if next_q in ba.accepting_sets:
@@ -345,14 +345,12 @@ def find_prod_succ(prev_sq, next_s, enabled_ba_trans, product, ba, fts):
 
             # labeled transition ?
             if hasattr(product, 'alphabet'):
-                product.transitions.add(
-                    prev_sq, new_sq,
-                    guard=fts.states[to_s]['ap'])
+                product.add_edge(prev_sq, new_sq, guard=fts.node[to_s]['ap'])
             elif hasattr(product, 'actions'):
                 if not sublabel_values:
-                    product.transitions.add(prev_sq, new_sq)
+                    product.add_edge(prev_sq, new_sq)
                 else:
-                    product.transitions.add(
+                    product.add_edge(
                         prev_sq, new_sq,
                         actions=sublabel_values['actions'])
     return (next_sqs, new_accepting)

@@ -131,28 +131,21 @@ def find_nodes(self, states=None, with_attr_dict=None, **with_attr):
     >>> import transys as trs
     >>> ts = trs.FTS()
     >>> ts.atomic_propositions.add('p')
-    >>> ts.states.add('s0', ap={'p'})
-
-      - To find the label of a single state C{'s0'}:
-
-          >>> a = ts.states.find(['s0'] )
-          >>> (s0_, label) = a[0]
-          >>> print(label)
-          {'ap': set(['p'])}
+    >>> ts.add_node('s0', ap={'p'})
 
       - To find all states with a specific label C{{'p'}}:
 
-          >>> ts.states.add('s1', ap={'p'})
-          >>> b = ts.states.find(with_attr_dict={'ap':{'p'} } )
+          >>> ts.add_node('s1', ap={'p'})
+          >>> b = find_nodes(with_attr_dict={'ap':{'p'} } )
           >>> states = [state for (state, label_) in b]
           >>> print(set(states) )
           {'s0', 's1'}
 
       - To find all states in subset C{M} labeled with C{{'p'}}:
 
-          >>> ts.states.add('s2', ap={'p'})
+          >>> ts.add_node('s2', ap={'p'})
           >>> M = {'s0', 's2'}
-          >>> b = ts.states.find(M, {'ap': {'p'} } )
+          >>> b = find_nodes(M, {'ap': {'p'} } )
           >>> states = [state for (state, label_) in b]
           >>> print(set(states) )
           {'s0', 's2'}

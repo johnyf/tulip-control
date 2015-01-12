@@ -54,6 +54,7 @@ import polytope as pc
 
 from polytope.plot import plot_partition, plot_transition_arrow
 from tulip import transys as trs
+from tulip.transys.labeled_graphs import add_adj
 from tulip.hybrid import LtiSysDyn, PwaSysDyn
 
 from .prop2partition import (PropPreservingPartition,
@@ -77,7 +78,7 @@ class AbstractSwitched(object):
 
       - ts: common TS, if any
 
-      - ppp2ts: map from C{ppp.regions} to C{ts.states}
+      - ppp2ts: map from C{ppp.regions} to C{ts} nodes.
 
       - modes: dict of {mode: AbstractPwa}
 

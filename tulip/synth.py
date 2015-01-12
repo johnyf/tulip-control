@@ -944,7 +944,7 @@ def synthesize_many(specs, ts=None, ignore_init=None,
 
     For example:
 
-      >>> ts.states.add_from(xrange(4))
+      >>> ts.add_nodes_from(xrange(4))
       >>> ts['door'].owner = 'env'
 
     will result in a logic formula with
@@ -954,7 +954,7 @@ def synthesize_many(specs, ts=None, ignore_init=None,
 
     The example:
 
-      >>> ts.states.add_from(['a', 'b', 'c'])
+      >>> ts.add_nodes_from(['a', 'b', 'c'])
       >>> ts['door'].owner = 'sys'
 
     will instead result in a string variable C{'door'}
@@ -993,14 +993,14 @@ def synthesize_many(specs, ts=None, ignore_init=None,
                         'Available solvers: "jtlv" and "gr1c"')
     try:
         logger.debug('Mealy machine has: n = ' +
-                     str(len(ctrl.states)) + ' states.')
+                     str(len(ctrl)) + ' states.')
     except:
         logger.debug('No Mealy machine returned.')
     # no controller found ?
     # counterstrategy not constructed by synthesize
     if not isinstance(ctrl, MealyMachine):
         return None
-    ctrl.remove_deadends()
+    remove_deadends(ctrl)
     return ctrl
 
 
@@ -1096,7 +1096,7 @@ def synthesize(
     ctrl = strategy2mealy(strategy, specs)
     try:
         logger.debug('Mealy machine has: n = ' +
-                     str(len(ctrl.states)) + ' states.')
+                     str(len(ctrl)) + ' states.')
     except:
         logger.debug('No Mealy machine returned.')
     # no controller found ?
@@ -1105,7 +1105,7 @@ def synthesize(
     if not isinstance(ctrl, MealyMachine):
         return None
     if rm_deadends:
-        ctrl.remove_deadends()
+        remove_deadends(ctrl)
     return ctrl
 
 
@@ -1205,19 +1205,19 @@ def strategy2mealy(A, spec):
     str_vars.update({
         k: v for k, v in sys_vars.iteritems()
         if isinstance(v, list)})
-    mach.states.add_from(A)
+    mach.add_nodes_from(A)
     # transitions labeled with I/O
     for u in A:
         for v in A.successors_iter(u):
             d = A.node[v]['state']
             d = _int2str(d, str_vars)
-            mach.transitions.add(u, v, **d)
+            mach.add_edge(u, v, **d)
 
             logger.info('node: {v}, state: {d}'.format(v=v, d=d))
     # special initial state, for first reaction
     initial_state = 'Sinit'
-    mach.states.add(initial_state)
-    mach.states.initial.add(initial_state)
+    mach.add_node(initial_state)
+    mach.initial_nodes.add(initial_state)
     # fix an ordering for keys
     # because tuple(dict.iteritems()) is not safe:
     # https://docs.python.org/2/library/stdtypes.html#dict.items
@@ -1242,7 +1242,7 @@ def strategy2mealy(A, spec):
         tmp.update(var_values)
         if eval(isinit, tmp):
             label = _int2str(var_values, str_vars)
-            mach.transitions.add(initial_state, u, **label)
+            mach.add_edge(initial_state, u, **label)
             # remember variable values to avoid
             # spurious non-determinism wrt the machine's memory
             init_valuations.add(vals)

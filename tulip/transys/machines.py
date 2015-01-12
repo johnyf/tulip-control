@@ -318,7 +318,7 @@ class MooreMachine(Transducer):
             'Output Ports:\n\t(name : type)\n' +
             _print_ports(self.outputs) +
             'States & State Var Values: (state : outputs : vars)\n')
-        for state, label_dict in self.states(data=True):
+        for state, label_dict in self.nodes_iter(data=True):
             s += '\t' + str(state) + ' :\n'
             # split into vars and outputs
             var_values = {k: v for k, v in label_dict.iteritems()
@@ -329,13 +329,13 @@ class MooreMachine(Transducer):
                   _print_label(output_values))
         s += (
             'Initial States:\n' +
-            pformat(self.states.initial, indent=3) + 2 * '\n')
-        s += 'Transitions & Labels: (from --> to : label)\n'
-        for from_state, to_state, label_dict in self.transitions(data=True):
+            pformat(self.initial_nodes, indent=3) + 2 * '\n')
+        s += 'Edges & Labels: (from --> to : label)\n'
+        for u, v, d in self.edges_iter(data=True):
             s += (
-                '\t' + str(from_state) + ' ---> ' +
-                str(to_state) + ' :\n' +
-                _print_label(label_dict))
+                '\t' + str(u) + ' ---> ' +
+                str(v) + ' :\n' +
+                _print_label(d))
         s += _hl + '\n'
         return s
 
@@ -367,29 +367,20 @@ class MealyMachine(Transducer):
     >>> pure_signal = {'present', 'absent'}
     >>> m.add_inputs([('tick', pure_signal) ])
     >>> m.add_outputs([('go', pure_signal), ('stop', pure_signal) ])
-    >>> m.states.add_from(['red', 'green', 'yellow'])
-    >>> m.states.initial.add('red')
+    >>> m.add_nodes_from(['red', 'green', 'yellow'])
+    >>> m.initial_nodes.add('red')
 
     For brevity:
 
     >>> p = 'present'
     >>> a = 'absent'
 
-    The transitions can equivalently be defined with dict().
-    So instead of the previous C{m.transitions.add}, we can use:
-
     >>> label = {'tick':p, 'go':p, 'stop':a}
-    >>> m.transitions.add('red', 'green', **label)
+    >>> m.add_edge('red', 'green', **label)
     >>> label = {'tick':p, 'go':a, 'stop':p}
-    >>> m.transitions.add('green', 'yellow', **label)
+    >>> m.add_edge('green', 'yellow', **label)
     >>> label = {'tick':p, 'go':a, 'stop':p}
-    >>> m.transitions.add('yellow', 'red', **label)
-
-    This avoids any ordering issues, i.e., changing the
-    order of the sublabels does not matter:
-
-    >>> label = {'go':p, 'tick':p, 'stop':a}
-    >>> m.transitions.add('red', 'green', **label)
+    >>> m.add_edge('yellow', 'red', **label)
 
     Theory
     ======
@@ -429,22 +420,22 @@ class MealyMachine(Transducer):
             'State Variables:\n\t(name : type)\n' +
             _print_ports(self.state_vars))
         s += 'States & State Var Values:\n'
-        for state, label_dict in self.states(data=True):
+        for state, label_dict in self.nodes_iter(data=True):
             s += ('\t' + str(state) + ' :\n' +
                   _print_label(label_dict))
         s += (
             'Initial States:\n' +
-            pformat(self.states.initial, indent=3) + 2 * '\n' +
+            pformat(self.initial_nodes, indent=3) + 2 * '\n' +
             'Input Ports:\n\t(name : type)\n' +
             _print_ports(self.inputs) +
             'Output Ports:\n\t(name : type)\n' +
             _print_ports(self.outputs) +
-            'Transitions & Labels: (from --> to : label)\n')
-        for from_state, to_state, label_dict in self.transitions(data=True):
+            'Edges & Labels: (from --> to : label)\n')
+        for u, v, d in self.edges_iter(data=True):
             s += (
-                '\t' + str(from_state) + ' ---> ' +
-                str(to_state) + ' :\n' +
-                _print_label(label_dict))
+                '\t' + str(u) + ' ---> ' +
+                str(v) + ' :\n' +
+                _print_label(d))
         s += _hl + '\n'
         return s
 
@@ -503,12 +494,11 @@ class MealyMachine(Transducer):
         (for each state and input at most a single transition enabled,
         this notion does not coincide with output-determinism)
 
-        Not exactly a wrapper of L{Transitions.find},
+        Not exactly a wrapper of L{find_edges},
         because it matches only that part of an edge label
         that corresponds to the inputs.
 
-        @param from_state: transition starts from this state.
-        @type from_state: element of C{self.states}
+        @param from_state: source node of transition
 
         @param inputs: C{dict} assigning a valid value to each input port.
         @type inputs: {'port_name':port_value, ...}
@@ -671,7 +661,7 @@ def guided_run(mealy, from_state=None, input_sequences=None):
     # note: initial sys state non-determinism not checked
     # initial sys edge non-determinism checked instead (more restrictive)
     if from_state is None:
-        state = next(iter(mealy.states.initial))
+        state = next(iter(mealy.initial_nodes))
     else:
         state = from_state
     n = len(next(seqs.itervalues()))
@@ -705,15 +695,15 @@ def random_run(mealy, from_state=None, N=10):
     @return: same as L{guided_run}
     """
     if from_state is None:
-        state = next(iter(mealy.states.initial))
+        state = next(iter(mealy.initial_nodes))
     else:
         state = from_state
     states_seq = []
     output_seqs = {k: list() for k in mealy.outputs}
     for i in xrange(N):
-        trans = mealy.transitions.find([state])
+        trans = mealy.out_edges(state)
         # choose next transition
-        selected_trans = choice(list(trans))
+        selected_trans = choice(trans)
         _, new_state, attr_dict = selected_trans
         # extend execution trace
         states_seq.append(new_state)
@@ -741,7 +731,7 @@ def interactive_run(mealy, from_state=None):
     @type mealy: L{MealyMachine}
     """
     if from_state is None:
-        state = next(iter(mealy.states.initial))
+        state = next(iter(mealy.initial_nodes))
     else:
         state = from_state
     while True:
@@ -757,7 +747,7 @@ def _interactive_run_step(mealy, state):
     #   by interactive simulation allowing both output-non-determinism
     #   and implementing spawning (which makes sense only for generators,
     #   *not* for transducers)
-    trans = mealy.transitions.find([state])
+    trans = mealy.out_edges(state)
     if not trans:
         print('Stop: no outgoing transitions.')
         return None
@@ -835,20 +825,20 @@ def moore2mealy(moore):
             masks = {port_name: mask_func}
         mealy.add_outputs({port_name: port_type}, masks=masks)
     # cp states
-    mealy.states.add_from(moore.states())
-    mealy.states.initial.add_from(moore.states.initial)
+    mealy.add_nodes_from(moore)
+    mealy.initial_nodes.update(moore.initial_nodes)
     # cp transitions
     for si in moore:
         output_values = {
-            k: v for k, v in moore.states[si].iteritems()
+            k: v for k, v in moore[si].iteritems()
             if k in moore.outputs}
         output_values = copy.deepcopy(output_values)
-        for si_, sj, attr_dict in moore.transitions.find(si):
+        for si_, sj, d in moore.out_edges_iter(si):
             # note that we don't filter only input ports,
             # so other edge annotation is preserved
-            attr_dict = copy.deepcopy(attr_dict)
-            attr_dict.update(output_values)
-            mealy.transitions.add(si, sj, attr_dict)
+            q = dict(d)
+            q.update(output_values)
+            mealy.add_edge(si, sj, q)
     return mealy
 
 
@@ -890,32 +880,32 @@ def mealy2moore(mealy):
         moore.add_outputs({port_name: port_type}, masks=masks)
     # initial state with arbitrary label
     out = {k: list(v)[0] for k, v in mealy.outputs.iteritems()}
-    s0 = list(mealy.states.initial)[0]
+    s0 = next(iter(mealy.initial_nodes))
     # create maps between Moore and Mealy states
     moore2mealy_states = dict()  # {qj : si} (function)
     mealy2moore_states = dict()  # {si : {qj, qk, ...} } (relation)
     new_s0 = _create_state_str(
         s0, out, moore, moore2mealy_states,
         mealy2moore_states)
-    moore.states.add(new_s0, out)
-    moore.states.initial.add(new_s0)
+    moore.add_node(new_s0, out)
+    moore.initial_nodes.add(new_s0)
     # cp transitions and create appropriate states
     Q = set()
     S = set()
     Q.add(new_s0)
     S.add(new_s0)
     while Q:
-        new_si = Q.pop()
-        si = moore2mealy_states[new_si]
-        for si_, sj, attr_dict in mealy.transitions.find(si):
-            in_values, out_values = _split_io(attr_dict, mealy)
-            new_sj = _create_state_str(
-                sj, out_values, moore, moore2mealy_states,
+        u = Q.pop()
+        si = moore2mealy_states[u]
+        for _, oldv, d in mealy.edges_iter(si, data=True):
+            in_values, out_values = _split_io(d, mealy)
+            v = _create_state_str(
+                oldv, out_values, moore, moore2mealy_states,
                 mealy2moore_states)
-            moore.transitions.add(new_si, new_sj, in_values)
-            if new_sj not in S:
-                Q.add(new_sj)
-                S.add(new_sj)
+            moore.add_edge(u, v, in_values)
+            if v not in S:
+                Q.add(v)
+                S.add(v)
     return moore
 
 
@@ -942,12 +932,12 @@ def _create_state_str(mealy_state, output, moore,
     """Used to create Moore states when converting Mealy -> Moore."""
     for s in mealy2moore_states.setdefault(mealy_state, set()):
         # check output values
-        if moore.states[s] == output:
+        if moore.node[s] == output:
             return s
     # create new
     n = len(moore)
     s = 's' + str(n)
-    moore.states.add(s, output)
+    moore.add_node(s, output)
     moore2mealy_states[s] = mealy_state
     mealy2moore_states[mealy_state].add(s)
     return s
@@ -985,7 +975,7 @@ def strip_ports(mealy, names):
     new.add_outputs(trim_dict(mealy.outputs, names))
 
     new.add_nodes_from(mealy)
-    new.states.initial.add_from(mealy.states.initial)
+    new.initial_nodes.update(mealy.initial_nodes)
 
     for u, v, d in mealy.edges_iter(data=True):
         d = trim_dict(d, names)

@@ -199,7 +199,7 @@ def get_input(
         start_state = 's' +str(start)
         end_state = 's' +str(end)
 
-        if end_state not in ofts.states.post(start_state):
+        if end_state not in ofts.successors(start_state):
             raise Exception('get_input: '
                 'no transition from state s' +str(start) +
                 ' to state s' +str(end)

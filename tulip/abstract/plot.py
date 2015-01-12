@@ -97,9 +97,11 @@ def plot_ts_on_partition(ppp, ts, ppp2ts, edge_label, only_adjacent, ax):
     arr_size = (u[0,0]-l[0,0])/50.0
 
     ts2ppp = {v:k for k,v in enumerate(ppp2ts)}
-    for from_state, to_state, label in ts.transitions.find(with_attr_dict=edge_label):
-        i = ts2ppp[from_state]
-        j = ts2ppp[to_state]
+    for u, v, d in ts.edges_iter(data=True):
+        if d != edge_label:
+            continue
+        i = ts2ppp[u]
+        j = ts2ppp[v]
 
         if only_adjacent:
             if ppp.adj[i, j] == 0:
@@ -117,9 +119,9 @@ def project_strategy_on_partition(ppp, mealy):
     n = len(ppp)
     proj_adj = sp.lil_matrix((n, n))
 
-    for (from_state, to_state, label) in mealy.transitions.find():
-        from_label = mealy.states[from_state]
-        to_label = mealy.states[to_state]
+    for u, v in mealy.edges_iter():
+        from_label = mealy.node[u]
+        to_label = mealy.node[v]
 
         if 'loc' not in from_label or 'loc' not in to_label:
             continue

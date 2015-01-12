@@ -151,7 +151,7 @@ def test_transient_regions():
                              trans_length=1)
 
     logger.debug(ab.ts)
-    self_loops = {i for i, j in ab.ts.transitions() if i == j}
+    self_loops = {u for u, v in ab.ts.edges_iter() if u == v}
     logger.debug('self loops at states: ' + str(self_loops))
 
     assert not self_loops

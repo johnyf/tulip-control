@@ -48,6 +48,7 @@ from polytope.plot import plot_partition
 
 from tulip import transys as trs
 
+from tulip.transys.labeled_graphs import add_adj
 # inline imports:
 #
 # from tulip.graphics import newax
@@ -652,15 +653,15 @@ def ppp2ts(part):
     ofts_states = range(n)
     ofts_states = trs.prepend_with(ofts_states, 's')
 
-    ofts.states.add_from(ofts_states)
+    ofts.add_node_from(ofts_states)
 
-    ofts.transitions.add_adj(adj, ofts_states)
+    add_adj(ofts, adj, ofts_states)
 
     # decorate TS with state labels
     atomic_propositions = set(part.prop_regions)
     ofts.atomic_propositions.add_from(atomic_propositions)
     for state, region in zip(ofts_states, part.regions):
         state_prop = region.props.copy()
-        ofts.states.add(state, ap=state_prop)
+        ofts.add_node_from(state, ap=state_prop)
 
     return (ofts, ofts_states)
