@@ -208,10 +208,9 @@ class AbstractPwa(object):
 
           type: L{FTS}
 
-      - ppp2ts: bijection between C{ppp.regions} and C{ts.states}.
+      - ppp2ts: bijection between C{ppp.regions} and C{ts}.
           Has common indices with C{ppp.regions}.
-          Elements are states in C{ts.states}.
-          (usually each state is a str)
+          Elements are states of C{ts}.
 
           type: list of states
 
@@ -406,7 +405,7 @@ class AbstractPwa(object):
     def verify_transitions(self):
         logger.info('verifying transitions...')
 
-        for from_state, to_state in self.ts.transitions():
+        for from_state, to_state in self.ts.edges_iter():
             i, from_region = self.ts2ppp(from_state)
             j, to_region = self.ts2ppp(to_state)
 
@@ -919,23 +918,22 @@ def discretize(
         tmp_part = deepcopy(new_part)
         tmp_part.compute_adj()
 
-    # Generate transition system and add transitions
-    ofts = trs.TransitionSystem()
+    # generate transition system and add transitions
+    ts = trs.TransitionSystem()
 
     adj = sp.lil_matrix(transitions.T)
     n = adj.shape[0]
-    ofts_states = range(n)
+    ts_states = range(n)
+    ts.add_nodes_from(ts_states)
+    add_adj(ts, adj, ts_states)
 
-    ofts.states.add_from(ofts_states)
-
-    ofts.transitions.add_adj(adj, ofts_states)
-
-    # Decorate TS with state labels
-    atomic_propositions = set(part.prop_regions)
-    ofts.atomic_propositions.add_from(atomic_propositions)
-    for state, region in zip(ofts_states, sol):
-        state_prop = region.props.copy()
-        ofts.states.add(state, ap=state_prop)
+    # annotate TS with state labels
+    for p in part.prop_regions:
+        ts.vars[p] = 'boolean'
+    for u, region in zip(ts, sol):
+        d = ts.node[u]
+        for p in ts.vars:
+            d[p] = (p in region.props)
 
     param = {
         'N':N,
@@ -964,8 +962,8 @@ def discretize(
 
     return AbstractPwa(
         ppp=new_part,
-        ts=ofts,
-        ppp2ts=ofts_states,
+        ts=ts,
+        ppp2ts=ts_states,
         pwa=ssys,
         pwa_ppp=part,
         ppp2pwa=orig,
@@ -1288,61 +1286,28 @@ def merge_abstractions(merged_abstr, trans, abstr, modes, mode_nums):
     @type abstr: dict of L{AbstractPwa}
     """
     # TODO: check equality of atomic proposition sets
-    aps = abstr[modes[0]].ts.atomic_propositions
-
-    logger.info('APs: ' + str(aps))
-
+    dvars = abstr[modes[0]].ts.vars
+    logger.info('APs: ' + str(dvars))
     sys_ts = trs.TransitionSystem()
-
-    # create stats
+    # add nodes
     n = len(merged_abstr.ppp)
-    states = range(n)
-    sys_ts.states.add_from(states)
-
-    sys_ts.atomic_propositions.add_from(aps)
-
+    nodes = range(n)
+    sys_ts.add_nodes_from(nodes)
+    sys_ts.vars.update(dvars)
     # copy AP labels from regions to discrete states
-    ppp2ts = states
-    for (i, state) in enumerate(ppp2ts):
-        props =  merged_abstr.ppp[i].props
-        sys_ts.states[state]['ap'] = props
-
-    # create mode actions
-    sys_actions = [str(s) for e,s in modes]
-    env_actions = [str(e) for e,s in modes]
-
-    # no env actions ?
-    if mode_nums[0] == 0:
-        actions_per_mode = {
-            (e,s):{'sys_actions':str(s)}
-            for e,s in modes
-        }
-        sys_ts.sys_actions.add_from(sys_actions)
-    elif mode_nums[1] == 0:
-        # no sys actions
-        actions_per_mode = {
-            (e,s):{'env_actions':str(e)}
-            for e,s in modes
-        }
-        sys_ts.env_actions.add_from(env_actions)
-    else:
-        actions_per_mode = {
-            (e,s):{'env_actions':str(e), 'sys_actions':str(s)}
-            for e,s in modes
-        }
-        sys_ts.env_actions.add_from([str(e) for e,s in modes])
-        sys_ts.sys_actions.add_from([str(s) for e,s in modes])
-
+    ppp2ts = nodes
+    for i, u in enumerate(ppp2ts):
+        props = merged_abstr.ppp[i].props
+        for p in sys_ts.vars:
+            sys_ts.node[u][p] = (p in props)
+    # add edges labeled with mode actions
+    sys_ts.vars['env_mode'] = {str(e) for e, s in modes}
+    sys_ts.env_vars.add('env_mode')
+    sys_ts.vars['sys_mode'] = {str(s) for e, s in modes}
     for mode in modes:
-        env_sys_actions = actions_per_mode[mode]
-        adj = trans[mode]
-
-        sys_ts.transitions.add_adj(
-            adj = adj,
-            adj2states = states,
-            **env_sys_actions
-        )
-
+        e, s = mode
+        d = {"env_mode'": str(e), "sys_mode'": str(s)}
+        add_adj(sys_ts, adj=trans[mode], adj2states=nodes, **d)
     merged_abstr.ts = sys_ts
     merged_abstr.ppp2ts = ppp2ts
 
@@ -1470,15 +1435,16 @@ def merge_partitions(abstractions):
 
    	# Create a list of merged-together regions
     ab0 = abstractions[init_mode]
-    regions = list(ab0.ppp)
-    parents = {init_mode:range(len(regions) )}
-    ap_labeling = {i:reg.props for i,reg in enumerate(regions)}
+    parents = {init_mode: range(len(ab0.ppp))}
+    ap_labeling = dict()
+    for i, reg in enumerate(ab0.ppp):
+        d = {k: (k in reg.props) for k in ab0.ppp.prop_regions}
+        ap_labeling[i] = d
     for cur_mode in remaining_modes:
         ab2 = abstractions[cur_mode]
         r = merge_partition_pair(
-            regions, ab2, cur_mode, prev_modes,
-            parents, ap_labeling
-        )
+            ab0.ppp, ab2, cur_mode, prev_modes,
+            parents, ap_labeling)
         regions, parents, ap_labeling = r
         prev_modes += [cur_mode]
     new_list = regions
@@ -1568,19 +1534,13 @@ def merge_partition_pair(
           includes the mode that was just merged.
     """
     logger.info('merging partitions')
-
-    part2 = ab2.ppp
-
     modes = prev_modes + [cur_mode]
-
     new_list = []
-    parents = {mode:dict() for mode in modes}
+    parents = {mode: dict() for mode in modes}
     ap_labeling = dict()
-
-    for i in xrange(len(old_regions)):
-        for j in xrange(len(part2)):
-            isect = pc.intersect(old_regions[i],
-                                 part2[j])
+    for i, u in enumerate(old_regions):
+        for j, v in enumerate(ab2.ppp):
+            isect = pc.intersect(u, v)
             rc, xc = pc.cheby_ball(isect)
 
             # no intersection ?
@@ -1594,7 +1554,7 @@ def merge_partition_pair(
                 isect = pc.Region([isect])
 
             # label the Region with propositions
-            isect.props = old_regions[i].props.copy()
+            isect.props = u.props.copy()
 
             new_list.append(isect)
             idx = new_list.index(isect)
@@ -1606,7 +1566,7 @@ def merge_partition_pair(
 
             # union of AP labels from parent states
             ap_label_1 = old_ap_labeling[i]
-            ap_label_2 = ab2.ts.states[j]['ap']
+            ap_label_2 = ab2.ts.node[j]
 
             logger.debug('AP label 1: ' + str(ap_label_1))
             logger.debug('AP label 2: ' + str(ap_label_2))
