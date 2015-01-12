@@ -34,6 +34,7 @@ from __future__ import absolute_import
 import copy
 from pprint import pformat
 from random import choice
+import networkx as nx
 from tulip.transys.labeled_graphs import SystemGraph
 
 # inline imports:
@@ -217,23 +218,6 @@ class Transducer(SystemGraph):
         # self.set_actions = {}
         super(Transducer, self).__init__()
 
-        # state labeling
-        self._state_label_def = dict()
-        self._state_dot_label_format = {'type?label': ':',
-                                        'separator': '\n'}
-
-        # edge labeling
-        self._transition_label_def = dict()
-        self._transition_dot_label_format = {'type?label': ':',
-                                             'separator': '\n'}
-        self._transition_dot_mask = dict()
-        self._state_dot_mask = dict()
-
-        self.default_export_fname = 'fsm'
-
-        self.dot_node_shape = {'normal': 'ellipse'}
-        self.default_export_fname = 'fsm'
-
     def add_inputs(self, new_inputs, masks=None):
         """Create new inputs.
 
@@ -273,7 +257,6 @@ class Transducer(SystemGraph):
             # printing format
             self._state_dot_label_format[var_name] = str(var_name)
 
-
 class MooreMachine(Transducer):
     """Moore machine.
 
@@ -299,12 +282,6 @@ class MooreMachine(Transducer):
     U{[M56]
     <http://tulip-control.sourceforge.net/doc/bibliography.html#m56>}
     """
-
-    def __init__(self):
-        """Instantiate a Moore state machine."""
-        Transducer.__init__(self)
-        self.dot_node_shape = {'normal': 'ellipse'}
-        self.default_export_fname = 'moore'
 
     def __str__(self):
         """Get informal string representation."""
@@ -352,6 +329,26 @@ class MooreMachine(Transducer):
             if port_name in masks:
                 mask_func = masks[port_name]
                 self._state_dot_mask[port_name] = mask_func
+    def to_pydot(self):
+        g = nx.MultiDiGraph()
+        for u, d in self.nodes_iter(data=True):
+            var = _join(d, self.state_vars)
+            o = _join(d, self.outputs)
+            r = list()
+            if var:
+                r.append('var:\n' + var)
+            if o:
+                r.append('out:\n' + o)
+            label = '\n'.join(r)
+            g.add_node(u, label=label, shape='ellipse')
+        for u, v, d in self.edges_iter(data=True):
+            i = _join(d, self.inputs)
+            if i:
+                label = 'in:\n' + i
+            else:
+                label = ''
+            g.add_edge(u, v, label=label)
+        return nx.to_pydot(g)
 
 
 class MealyMachine(Transducer):
@@ -406,12 +403,6 @@ class MealyMachine(Transducer):
     <http://tulip-control.sourceforge.net/doc/bibliography.html#m55>}
     """
 
-    def __init__(self):
-        Transducer.__init__(self)
-        # will point to selected values of self._transition_label_def
-        self.dot_node_shape = {'normal': 'ellipse'}
-        self.default_export_fname = 'mealy'
-
     def __str__(self):
         """Get informal string representation."""
         s = (
@@ -438,20 +429,6 @@ class MealyMachine(Transducer):
         s += _hl + '\n'
         return s
 
-    def _save(self, path, fileformat):
-        """Export options available only for Mealy machines.
-
-        @type fileformat: 'scxml'
-        """
-        if fileformat != 'scxml':
-            return False
-        from tulip.transys.export import machine2scxml
-        s = machine2scxml.mealy2scxml(self)
-        # dump to file
-        f = open(path, 'w')
-        f.write(s)
-        f.close()
-        return True
 
     def add_outputs(self, new_outputs, masks=None):
         """Add new outputs.
@@ -485,6 +462,22 @@ class MealyMachine(Transducer):
             if port_name in masks:
                 mask_func = masks[port_name]
                 self._transition_dot_mask[port_name] = mask_func
+    def to_pydot(self):
+        g = nx.MultiDiGraph()
+        for u, d in self.nodes_iter(data=True):
+            label = _join(d, self.state_vars)
+            g.add_node(u, label=label, shape='ellipse')
+        for u, v, d in self.edges_iter(data=True):
+            i = _join(d, self.inputs)
+            o = _join(d, self.outputs)
+            r = list()
+            if i:
+                r.append('in:\n' + i)
+            if o:
+                r.append('out:\n' + o)
+            label = '\n'.join(r)
+            g.add_edge(u, v, label=label)
+        return nx.to_pydot(g)
 
     def reaction(self, from_state, inputs):
         """Return next state and output, when reacting to given inputs.
@@ -980,3 +973,10 @@ def strip_ports(mealy, names):
         d = trim_dict(d, names)
         new.add_edge(u, v, **d)
     return new
+
+
+def _join(d, keys, sep=': ', itemsep='\n'):
+    return itemsep.join(
+        '{k}{sep}{v}'.format(k=k, sep=sep, v=v)
+        for k, v in d.iteritems()
+        if k in keys)
