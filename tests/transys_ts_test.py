@@ -9,38 +9,16 @@ from tulip.transys import products
 
 def ts_test():
     ts = trs.TransitionSystem()
-
-    ts.states.add('s0')
-    assert 's0' in ts
-    assert 's0' in ts.node
-    assert 's0' in ts.states
-
-    states = {'s0', 's1', 's2', 's3'}
-    ts.states.add_from(states)
-    assert set(ts.states) == states
-
-    ts.transitions.add('s0', 's1')
-    ts.transitions.add_from([('s1', 's2'), ('s2', 's3'), ('s3', 's0')])
-
-    ts.states.initial.add('s0')
-    ts.states.initial.add_from({'s0', 's1'})
-
-    ts.atomic_propositions.add('p')
-    assert set(ts.atomic_propositions) == {'p'}
-
-    ts.states['s0']['ap'] = {'p'}
-    ts.states['s1']['ap'] = set()
-    ts.states['s2']['ap'] = set()
-    ts.states['s3']['ap'] = set()
-
-    assert ts.states['s0']['ap'] == {'p'}
-    for state in {'s1', 's2', 's3'}:
-        assert ts.states[state]['ap'] == set()
-
-    logger.debug(ts)
-    return ts
-
-
+    ts.add_nodes_from([0, 1, 2])
+    ts.initial_nodes.update([0, 2])
+    ts.vars = {'a': 'boolean', 'b': (0, 3)}
+    ts.env_vars = {'a'}
+    ts.add_node(0, a=True, b=1)
+    ts.add_node(1, a=False, b=3)
+    ts.add_node(2, a=True, b=2)
+    ts.add_edge(0, 1, **{"a'": False})
+    ts.add_edge(0, 1, **{"a'": True, "b'": 2})
+    assert ts.is_consistent()
 
 
 def ba_ts_prod_test():
