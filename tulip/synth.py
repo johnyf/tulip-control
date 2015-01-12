@@ -1196,9 +1196,9 @@ def strategy2mealy(A, spec):
     sys_vars = spec.sys_vars
     mach = MealyMachine()
     inputs = machines.create_machine_ports(env_vars)
-    mach.add_inputs(inputs)
+    mach.inputs.update(inputs)
     outputs = machines.create_machine_ports(sys_vars)
-    mach.add_outputs(outputs)
+    mach.outputs.update(outputs)
     str_vars = {
         k: v for k, v in env_vars.iteritems()
         if isinstance(v, list)}

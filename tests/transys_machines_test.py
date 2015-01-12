@@ -10,10 +10,10 @@ from tulip.transys import machines
 
 def test_strip_ports():
     mealy = machines.MealyMachine()
-    mealy.add_inputs({'door':{'open', 'closed'}})
-    mealy.add_outputs({'led':{'on', 'off'},
-                       'window':{'open', 'closed'}})
-    
+    mealy.inputs.update({'door': {'open', 'closed'}})
+    mealy.outputs.update({'led': {'on', 'off'},
+                          'window': {'open', 'closed'}})
+
     mealy.add_nodes_from(xrange(10))
     mealy.initial_nodes.add(0)
 
