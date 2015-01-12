@@ -29,126 +29,69 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
-"""Base classes for labeled directed graphs"""
+"""Rooted graphs and utils for labeled digraphs."""
 from __future__ import absolute_import
 import logging
 logger = logging.getLogger(__name__)
 import os
 import networkx as nx
 
-# inline imports:
-#
-# from tulip.transys.export import graph2dot
-# from tulip.transys.export import save_d3
-# from tulip.transys.export import graph2dot
 
+class SystemGraph(nx.MultiDiGraph):
+    """Rooted multi-digraph with consistency methods.
 
+    The attribute `initial_nodes` must contain nodes.
+    """
 
+    def __init__(self):
+        super(SystemGraph, self).__init__()
+        self.initial_nodes = set()
 
-    def dump(self, filename=None, fileformat=None,
-             rankdir='LR', prog=None,
-             wrap=10, tikz=False):
-        """Save image to file.
+    def is_consistent(self):
+        """Return `True` if attributes are conformant."""
+        assert self.initial_nodes.issubset(self)
 
-        Recommended file formats:
+    def make_consistent(self):
+        """Remove from attributes elements that are not nodes.
 
-            - tikz (via dot2tex)
-            - pdf
-            - svg
-            - dot
-            - png
+        Call this to update attributes like `initial_nodes`
+        after removing nodes from `self`.
+        """
+        self.initial_nodes = self.initial_nodes.intersection(self)
 
-        Any other format supported by C{pydot.write} is available.
-
-        Experimental:
-
-            - html (uses d3.js)
-            - 'scxml'
+    def dump(self, filename='out.pdf', rankdir='LR', prog='dot'):
+        """Write to file using GraphViz.
 
         Requires
         ========
           - graphviz dot: http://www.graphviz.org/
           - pydot: https://pypi.python.org/pypi/pydot
 
-        and for tikz:
-
-          - dot2tex: https://pypi.python.org/pypi/dot2tex
-          - dot2texi: http://www.ctan.org/pkg/dot2texi
-            (to automate inclusion)
-
         See Also
         ========
-        L{plot}, C{pydot.Dot.write}
+        `pydot.Dot.write`
 
-        @param filename: file path to save image to
-            Default is C{self.name}, unless C{name} is empty,
-            then use 'out.pdf'.
-
-            If extension is missing '.pdf' is used.
+        @param filename: path with exrension, for example: 'out.pdf'
         @type filename: str
-
-        @param fileformat: replace the extension of C{filename}
-            with this. For example::
-
-                filename = 'fig.pdf'
-                fileformat = 'svg'
-
-            result in saving 'fig.svg'
-
-        @param rankdir: direction for dot layout
-        @type rankdir: str = 'TB' | 'LR'
-            (i.e., Top->Bottom | Left->Right)
-
-        @param prog: executable to call
-        @type prog: dot | circo | ... see pydot.Dot.write
-
+        @param rankdir, prog: see `pydot.Dot.write`
         @param wrap: max width of node strings
         @type wrap: int
-
-        @param tikz: use tikz automata library in dot
 
         @rtype: bool
         @return: True if saving completed successfully, False otherwise.
         """
-        if filename is None:
-            if not self.name:
-                filename = 'out'
-            else:
-                filename = self.name
-        fname, fextension = os.path.splitext(filename)
-        # default extension
-        if not fextension or fextension is '.':
-            fextension = '.pdf'
-        if fileformat:
-            fextension = '.' + fileformat
-        filename = fname + fextension
-        # drop '.'
-        fileformat = fextension[1:]
-        # check for html
-        if fileformat is 'html':
-            from tulip.transys.export import save_d3
-            return save_d3.labeled_digraph2d3(self, filename)
-        # subclass has extra export formats ?
-        if hasattr(self, '_save'):
-            if self._save(filename, fileformat):
-                return True
-        if prog is None:
-            prog = self.default_layout
-        from tulip.transys.export import graph2dot
-        graph2dot.save_dot(self, filename, fileformat, rankdir,
-                           prog, wrap, tikz=tikz)
+        name, ext = os.path.splitext(filename)
+        pd = self.to_pydot()
+        pd.set_rankdir(rankdir)
+        pd.set_splines('true')
+        pd.write(filename, format=ext[1:], prog=prog)
         return True
 
-    def dumps_dot(self, wrap=10, **kwargs):
-        """Return dot string.
-
-        Requires pydot.
-        """
-        from tulip.transys.export import graph2dot
-        return graph2dot.graph2dot_str(self, wrap, **kwargs)
+    def to_pydot(self):
+        return nx.to_pydot(self)
 
     def plot(self, rankdir='LR', prog=None, wrap=10, ax=None):
-        """Plot image using dot.
+        """Plot image using GraphViz.
 
         No file I/O involved.
         Requires GraphViz dot and either Matplotlib or IPython.
@@ -159,14 +102,14 @@ import networkx as nx
 
         See Also
         ========
-        L{save}
+        L{dump}
 
         Depends
         =======
         dot and either of IPython or Matplotlib
         """
         # anything to plot ?
-        if not self.states:
+        if not self:
             print(
                 60 * '!' +
                 "\nThe system doesn't have any states to plot.\n"
