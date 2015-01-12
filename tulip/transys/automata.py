@@ -33,14 +33,12 @@
 from __future__ import absolute_import
 import logging
 logger = logging.getLogger(__name__)
-from collections import Iterable
 from pprint import pformat
-from tulip.transys.labeled_graphs import (
-    LabeledDiGraph, str2singleton, prepend_with)
-from tulip.transys.transys import GameGraph
+import networkx as nx
+from tulip.transys.labeled_graphs import SystemGraph, check_value
 
 
-class Automaton(LabeledDiGraph):
+class Automaton(SystemGraph):
     """Alternating acceptor of (in)finite trees.
 
     An acceptor represents an indicator function of a set.
@@ -103,13 +101,16 @@ class Automaton(LabeledDiGraph):
         each acceptance condition wrt the automaton's nodes.
 
 
-      - `alphabet`: `dict` mapping from symbols to domains.
-        Invariants of existential nodes are models or
-        formulae over `alphabet`.
+      - `alphabet`: `dict` mapping symbols to domains.
+        Each edge that has an existential node as source is
+        labeled with either:
+          - an element of `alphabet`, or
+          - a formula that defines a subset of `alphabet`
+        These define the invariant at the target node.
 
 
       - `directions`: Like `alphabet`, but for universal nodes.
-        If `directions` is `None`, then the automaton recognizes words.
+        If `directions` is empty, then the automaton recognizes words.
 
 
       - `guards` defines the representation of edge labels and can be:
@@ -152,44 +153,31 @@ class Automaton(LabeledDiGraph):
 
     See also
     ========
-    [`KripkeStructure`], [`Transducer`]
+    [`TransitionSystem`], [`Transducer`]
     """
 
     def __init__(self, acceptance='Buchi', alphabet=None,
                  directions=None, universal_nodes=None, guards='boolean'):
+        super(Automaton, self).__init__()
         if universal_nodes is None:
             universal_nodes = set()
         if alphabet is None:
             alphabet = dict()
+        if directions is None:
+            directions = dict()
         # init attributes
         self.universal_nodes = universal_nodes
         self.acceptance = acceptance
         self.accepting_sets = self._init_accepting_sets(acceptance)
-        # default: powerset alphabet
         alphabet = alphabet
         self.alphabet = alphabet
         self.directions = directions
         # explicit is better than implicit
         self.guards = guards
-        # type checking for edge labeling
-        edge_label_types = [
-            {'name': 'guard',
-             'values': None,
-             'setter': True}]
-        super(Automaton, self).__init__(edge_label_types=edge_label_types)
-        # formatting options
-        self._transition_dot_label_format = {
-            'guard': '',
-            'type?label': '',
-            'separator': '\n'}
-        self._transition_dot_mask = dict()
-        self.dot_node_shape = {'normal': 'circle',
-                               'accepting': 'doublecircle'}
-        self.default_export_fname = 'fsa'
 
     def __str__(self):
         show_node_data = (self.acceptance == 'parity')
-        is_unary = (self.directions is None or len(self.directions) <= 1)
+        is_unary = (not self.directions or len(self.directions) <= 1)
         f = lambda x: pformat(x, indent=3)
         s = (
             '{hl}\n Alternating {self.acceptance} {word_tree} automaton\n'
@@ -213,11 +201,32 @@ class Automaton(LabeledDiGraph):
                 self=self,
                 word_tree='word' if is_unary else 'tree',
                 nodes=f(self.nodes(data=show_node_data)),
-                init_nodes=f(self.states.initial),
+                init_nodes=f(self.initial_nodes),
                 universal_nodes=f(self.universal_nodes),
                 accepting_sets=f(self.accepting_sets),
-                edges=f(self.transitions(data=True)))
+                edges=f(self.edges(data=True)))
         return s
+
+    def to_pydot(self):
+        # TODO: initial nodes
+        g = nx.MultiDiGraph()
+        for u, d in self.nodes_iter(data=True):
+            if u in self.universal_nodes:
+                shape = 'box'
+            else:
+                shape = 'circle'
+            if self.acceptance in {'finite', 'Buchi', 'coBuchi'}:
+                peripheries = 2
+            else:
+                peripheries = 1
+            g.add_node(u, shape=shape, peripheries=peripheries)
+        for u, v, d in self.edges_iter(data=True):
+            label = ', '.join(
+                '{k} = {v}'.format(k=k, v=v)
+                for k, v in d.iteritems()
+                if k in self.directions or k in self.alphabet)
+            g.add_edge(u, v, label=label)
+        return nx.to_pydot(g)
 
     def _init_accepting_sets(self, acceptance):
         """Return a `set`, `list` or other, depending on acceptance type."""
@@ -231,8 +240,9 @@ class Automaton(LabeledDiGraph):
             raise ValueError('unknown acceptance: {s}'.format(s=acceptance))
         return a
 
-    def check_sanity(self):
+    def is_consistent(self):
         """Return `True` if conformant to conventions."""
+        super(Automaton, self).is_consistent()
         a = self.acceptance
         s = self.accepting_sets
         f = lambda x: all(u in self for u in x)
@@ -251,6 +261,13 @@ class Automaton(LabeledDiGraph):
             assert len(s) == 2
         else:
             raise Exception('Unknown acceptance: {a}'.format(a=a))
+        for u, v, d in self.edges_iter(data=True):
+            t = self.alphabet
+            r = self.directions
+            if u in self.universal_nodes:
+                t, r = r, t
+            for k, v in d.iteritems():
+                if k in t:
+                    check_value(v, t[k])
+                assert k not in r
         return True
-
-
