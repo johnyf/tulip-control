@@ -4,7 +4,6 @@ logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 logging.getLogger('tulip.transys.products').setLevel(logging.DEBUG)
 from tulip import transys as trs
-from tulip.transys.mathset import MathSet, PowerSet
 from tulip.transys import products
 
 
@@ -42,34 +41,6 @@ def ts_test():
     return ts
 
 
-def ba_test():
-    ba = trs.Automaton()
-
-    aps = ['p']
-
-    ba.alphabet.math_set |= {'p'}
-    props = ba.alphabet.math_set
-    assert 'p' in props
-    assert props == MathSet(aps)
-    assert ba.alphabet == PowerSet(aps)
-
-    ba.states.add_from({'q0', 'q1'})
-    assert set(ba.states) == {'q0', 'q1'}
-
-    ba.states.initial.add('q0')
-    assert set(ba.states.initial) == {'q0'}
-
-    ba.accepting_sets.add('q1')
-    assert set(ba.accepting_sets) == {'q1'}
-
-    ba.transitions.add('q0', 'q1', guard={'p'})
-    ba.transitions.add('q1', 'q1', guard={'p'})
-    ba.transitions.add('q1', 'q0', guard=set())
-    ba.transitions.add('q0', 'q0', guard=set())
-
-    logger.debug(ba)
-    ba.save('ba.pdf')
-    return ba
 
 
 def ba_ts_prod_test():

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Tests for transys.automata (part of transys subpackage)"""
-from tulip import transys as trs
+from nose.tools import assert_raises
+from tulip.transys import Automaton
 
 
 def rabin_test():
@@ -29,3 +30,17 @@ def rabin_test():
     assert set(s['[]<>']) == {2, 1}
     assert set(s['<>[]!']) == set()
     assert dra.check_sanity()
+def ba_test():
+    ba = Automaton(acceptance='Buchi')
+    ba.alphabet['p'] = 'boolean'
+    ba.add_nodes_from([0, 1, 2])
+    ba.initial_nodes.add(0)
+    ba.accepting_sets.update([0, 1])
+    ba.add_edge('q0', 'q1', p=True)
+    ba.add_edge('q1', 'q1', p=False)
+    ba.add_edge('q1', 'q0', p=True)
+    ba.add_edge('q0', 'q0', p=False)
+    assert ba.is_consistent()
+    ba.add_edge('q0', 'q0', p='a')
+    with assert_raises(AssertionError):
+        ba.is_consistent()
