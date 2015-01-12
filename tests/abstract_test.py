@@ -102,8 +102,8 @@ def transition_directions_test():
 
     assert set(ts.edges()) == edges
     for i, j in edges:
-        assert(ts[i][j][0]['env_actions'] == 'normal')
-        assert(ts[i][j][0]['sys_actions'] == 'fly')
+        assert ts[i][j][0]["env_mode'"] == 'normal'
+        assert ts[i][j][0]["sys_mode'"] == 'fly'
 
 transition_directions_test.slow = True
 
