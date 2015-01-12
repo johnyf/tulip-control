@@ -51,63 +51,6 @@ from tulip.transys.mathset import PowerSet, MathSet
 _hl = 40 * '-'
 
 
-class KripkeStructure(LabeledDiGraph):
-    """Directed graph with labeled vertices and initial vertices.
-
-    References
-    ==========
-    1. Kripke S.
-      Semantical Considerations on Modal Logic
-      Acta Philosophica Fennica, 16, pp. 83-94, 1963
-
-    2. Clarke E.M.; Grumberg O.; Peled D.A.
-      Model Checking, MIT Press, 1999, p.14
-
-    3. Schneider K.
-      Verification of Reactive Systems
-      Springer, 2004, Def. 2.1, p.45
-    """
-
-    def __init__(self):
-        ap_labels = PowerSet()
-        node_label_types = [
-            {'name': 'ap',
-             'values': ap_labels,
-             'setter': ap_labels.math_set,
-             'default': set()}]
-        super(KripkeStructure, self).__init__(node_label_types)
-        self.atomic_propositions = self.ap
-        # dot formatting
-        self._state_dot_label_format = {
-            'ap': '',
-            'type?label': '',
-            'separator': '\n'}
-        self.dot_node_shape = {'normal': 'rectangle'}
-        self._state_dot_label_format = {
-            'ap': '',
-            'type?label': '',
-            'separator': '\n'}
-        self._transition_dot_label_format = {
-            'type?label': ':',
-            'separator': '\n'}
-        self._transition_dot_mask = dict()
-
-    def __str__(self):
-        s = (
-            'Kripke Structure: ' + self.name + '\n' +
-            _hl + '\n' +
-            'Atomic Propositions (APs):\n\t' +
-            pformat(self.atomic_propositions, indent=3) + 2 * '\n' +
-            'States labeled with sets of APs:\n' +
-            _dumps_states(self, sort=True) + 2 * '\n' +
-            'Initial States:\n' +
-            pformat(self.states.initial, indent=3) + 2 * '\n' +
-            'Transitions:\n' +
-            pformat(self.transitions(), indent=3) +
-            '\n' + _hl + '\n')
-        return s
-
-
 class TransitionSystem(LabeledDiGraph):
     """Kripke structure with labeled states and edges.
 
