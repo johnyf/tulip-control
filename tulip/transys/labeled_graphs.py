@@ -305,15 +305,17 @@ def find_edges(self, from_states=None, to_states=None,
     return found_transitions
 
 
-def remove_deadends(self):
+def remove_deadends(g):
     """Recursively delete nodes with no outgoing transitions."""
     s = {1}
     while s:
-        s = {n for n in self if not self.succ[n]}
-        self.remove_nodes_from(s)
+        s = {n for n in g if not g.succ[n]}
+        g.remove_nodes_from(s)
+    g.make_consistent()
+    return g
 
 
-def paint(self, state, color):
+def paint(g, u, color):
     """Color the given state.
 
     The state is filled with given color,
@@ -324,36 +326,16 @@ def paint(self, state, color):
     @param color: with which to paint C{state}
     @type color: str of valid dot color
     """
-    self.graph.node[state]['style'] = 'filled'
-    self.graph.node[state]['fillcolor'] = color
+    g.add_node(u, style='filled', fillcolor=color)
 
 
-def add_adj(graph, adj, adj2states, attr_dict=None, **attr):
+def add_adj(g, adj, adj2states, **attr):
     """Add multiple labeled transitions from adjacency matrix.
 
-    The label can be empty.
-
-    @param adj: new transitions represented by adjacency matrix.
-    @type adj: scipy.sparse.lil (list of lists)
-
-    @param adj2states: map from adjacency matrix indices to states.
-        If value not a state, raise Exception.
-        Use L{States.add}, L{States.add_from} to add states first.
-
-        For example the 1st state in adj2states corresponds to
-        the first node in C{adj}.
-
-        States must have been added using:
-
-           - sys.states.add, or
-           - sys.states.add_from
-
-        If C{adj2states} includes a state not in sys.states,
-        no transition is added and an exception raised.
-    @type adj2states: either of:
-        - C{dict} from adjacency matrix indices to
-          existing, or
-        - C{list} of existing states
+    @param adj: new edges as adjacency matrix
+    @type adj: `scipy.sparse.lil` (list of lists)
+    @param adj2states: map from `adj` indices to `g` nodes.
+    @type adj2states: `dict`
     """
     # square ?
     if adj.shape[0] != adj.shape[1]:
@@ -362,6 +344,6 @@ def add_adj(graph, adj, adj2states, attr_dict=None, **attr):
     nx_adj = nx.from_scipy_sparse_matrix(adj, create_using=nx.DiGraph())
     # add each edge
     for i, j in nx_adj.edges_iter():
-        si = adj2states[i]
-        sj = adj2states[j]
-        graph.add(si, sj, attr_dict, **attr)
+        u = adj2states[i]
+        v = adj2states[j]
+        g.add_edge(u, v, **attr)
