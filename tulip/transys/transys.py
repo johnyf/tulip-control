@@ -379,15 +379,6 @@ class TransitionSystem(LabeledDiGraph):
             '\n' + _hl + '\n')
         return s
 
-    @property
-    def owner(self):
-        return self._owner
-
-    @owner.setter
-    def owner(self, x):
-        if x not in {'env', 'sys'}:
-            raise ValueError("The owner can be either 'sys' or 'env'.")
-        self._owner = x
 
     def _save(self, path, fileformat):
         """Export options available only for closed systems.
