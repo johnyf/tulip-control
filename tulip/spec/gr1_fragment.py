@@ -56,16 +56,15 @@ from tulip.spec import ast as sast
 def check(formula):
     """Parse formula string and create abstract syntax tree (AST)."""
     ast = lexyacc.parse(formula)
+    dfa = trs.Automaton(acceptance='finite')
+    dfa.directions['letter'] = {
+        '!', 'W', 'U', 'G', 'F',
+        'U_left', 'U_right',
+        'W_left', 'W_right'}
     nodes = {'gf', 'fg', 'g', 'f'}
     dfa.add_nodes_from(nodes)
+    dfa.accepting_sets.update(nodes)
     dfa.initial_nodes.add('gf')
-
-    dfa = trs.automata.FiniteWordAutomaton(atomic_proposition_based=False,
-                                           deterministic=True)
-
-    dfa.alphabet |= {'!', 'W', 'U', 'G', 'F',
-                     'U_left', 'U_right',
-                     'W_left', 'W_right'}
 
     dfa.add_edge('gf', 'fg', letter='!')
     dfa.add_edge('fg', 'gf', letter='!')
