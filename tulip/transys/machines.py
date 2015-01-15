@@ -377,20 +377,27 @@ class MealyMachine(Transducer):
         s += _hl + '\n'
         return s
 
-    def to_pydot(self):
+    def to_pydot(self, ports=None):
         g = nx.MultiDiGraph()
         for u, d in self.nodes_iter(data=True):
-            label = _join(d, self.state_vars)
+            label = '{u}\n{l}'.format(u=u, l=_join(d, self.state_vars))
             g.add_node(u, label=label, shape='ellipse')
         for u, v, d in self.edges_iter(data=True):
-            i = _join(d, self.inputs)
-            o = _join(d, self.outputs)
+            if ports is None:
+                din = self.inputs
+                dout = self.outputs
+            else:
+                din = project_dict(self.inputs, ports)
+                dout = project_dict(self.outputs, ports)
+            i = _join(d, din)
+            o = _join(d, dout)
             r = list()
             if i:
                 r.append('in:\n' + i)
             if o:
                 r.append('out:\n' + o)
             label = '\n'.join(r)
+            label = label if label else '""'
             g.add_edge(u, v, label=label)
         return nx.to_pydot(g)
 
