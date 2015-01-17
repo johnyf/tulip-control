@@ -654,6 +654,11 @@ def strategy2mealy(A, spec):
         in the given tulipcon XML string x, not on the argument spec0.
     """
     logger.info('converting strategy (compact) to Mealy machine')
+    if not A:
+        raise Exception(
+            'Empty graph returned as synthesized strategy !\n'
+            'Is your design perhaps trivially realizable ?\n'
+            '(i.e., has false assumption ?)')
     env_vars = spec.env_vars
     sys_vars = spec.sys_vars
     mach = MealyMachine()
