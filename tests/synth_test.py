@@ -5,6 +5,7 @@ import logging
 logging.getLogger('tulip').setLevel(logging.ERROR)
 logging.getLogger('tulip.interfaces.gr1c').setLevel(logging.DEBUG)
 from nose.tools import assert_raises
+import networkx as nx
 import numpy as np
 from scipy import sparse as sp
 from tulip import spec, synth, transys
@@ -569,6 +570,25 @@ def test_var_name_conflicts():
     conversion_raises(synth.sys_to_spec, sys)
 
     conversion_raises(synth.env_to_spec, sys)
+
+
+def test_strategy_to_mealy():
+    # strategy
+    g = nx.MultiDiGraph()
+    g.add_node(0, state=dict(envkey0=0, pc0=0, sys_ps=0, syskey0=0))
+    g.add_node(1, state=dict(envkey0=0, pc0=0, sys_ps=1, syskey0=0))
+    g.add_edge(0, 0)
+    g.add_edge(1, 0)
+    # spec
+    env_vars = {'envkey0': (0, 0), 'pc0': (0, 0), 'sys_ps': (0, 1)}
+    sys_vars = {'syskey0': (0, 0)}
+    env_init = ['((((pc0 = 0))) & (envkey0 = 0))']
+    sys_init = ['((syskey0 = 0))']
+    spc = spec.GRSpec(
+        env_vars=env_vars, sys_vars=sys_vars,
+        env_init=env_init, sys_init=sys_init)
+    mealy = synth.strategy2mealy(g, spc)
+    assert mealy is not None
 
 
 def test_determinize_machine_init():
