@@ -688,11 +688,8 @@ def strategy2mealy(A, spec):
     # fix an ordering for keys
     # because tuple(dict.iteritems()) is not safe:
     # https://docs.python.org/2/library/stdtypes.html#dict.items
-    try:
-        u = next(iter(A))
-        keys = A.node[u]['state'].keys()
-    except:
-        logger.warn('strategy has no states.')
+    u = next(iter(A))
+    keys = A.node[u]['state'].keys()
     # to store tuples of dict values for fast search
     spec.str_to_int()
     isinit = spec.compile_init(no_str=True)
