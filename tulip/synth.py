@@ -699,31 +699,33 @@ def strategy2mealy(A, spec):
     for u, d in A.nodes_iter(data=True):
         var_values = d['state']
         vals = tuple(var_values[k] for k in keys)
+        logger.debug(
+            'machine vertex: {u}, has var values: {v}'.format(
+                u=u, v=var_values))
         # already an initial valuation ?
         if vals in init_valuations:
             continue
         # add edge: Sinit -> u ?
         tmp.update(var_values)
-        if eval(isinit, tmp):
-            label = _int2str(var_values, str_vars)
-            mach.add_edge(initial_state, u, **label)
-            # remember variable values to avoid
-            # spurious non-determinism wrt the machine's memory
-            init_valuations.add(vals)
-            logger.debug('found initial state: {u}'.format(u=u))
-        logger.debug('machine vertex: {u}, has var values: {v}'.format(
-                     u=u, v=var_values))
-    if not mach.succ.get('Sinit'):
-        import pprint
-        raise Exception(
-            'The machine obtained from the strategy '
-            'does not have any initial states !\n'
-            'The strategy is:\n'
-            'vertices:' + pprint.pformat(A.nodes(data=True)) + 2 * '\n' +
-            'edges:\n' + str(A.edges()) + 2 * '\n' +
-            'and the machine:\n' + str(mach) + 2 * '\n' +
-            'and the specification is:\n' + str(spec.pretty()) + 2 * '\n')
-    return mach
+        if not eval(isinit, tmp):
+            continue
+        label = _int2str(var_values, str_vars)
+        mach.add_edge(initial_state, u, **label)
+        # remember variable values to avoid
+        # spurious non-determinism wrt the machine's memory
+        init_valuations.add(vals)
+        logger.debug('found initial state: {u}'.format(u=u))
+    if mach.succ.get('Sinit'):
+        return mach
+    import pprint
+    raise Exception(
+        'The machine obtained from the strategy '
+        'does not have any initial states !\n'
+        'The strategy is:\n'
+        'vertices:' + pprint.pformat(A.nodes(data=True)) + 2 * '\n' +
+        'edges:\n' + str(A.edges()) + 2 * '\n' +
+        'and the machine:\n' + str(mach) + 2 * '\n' +
+        'and the specification is:\n' + str(spec.pretty()) + 2 * '\n')
 
 
 def _int2str(label, str_vars):
