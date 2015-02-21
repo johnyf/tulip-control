@@ -44,6 +44,7 @@ logger = logging.getLogger(__name__)
 # import pprint
 import re
 from tulip.spec import ast
+import natsort
 
 
 def make_jtlv_nodes():
@@ -301,6 +302,7 @@ def _format_slugs_vars(vardict, name):
             )
         else:
             raise ValueError('unknown domain type: {dom}'.format(dom=dom))
+    a = natsort.natsorted(a)
     return '[{name}]\n{vars}\n\n'.format(name=name, vars='\n'.join(a))
 
 
