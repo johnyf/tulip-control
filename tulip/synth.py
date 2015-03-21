@@ -444,7 +444,7 @@ def map_ap_to_states(fts):
     @rtype: `{'p': s, ...}` where `'p'` a proposition and
         `s` a set of states in `fts`.
     """
-    table = {p: set() for p in fts.atomic_propositions}
+    table = {p: set() for p in fts.vars}
     for u in fts:
         for p in fts.node[u]['ap']:
             table[p].add(u)
