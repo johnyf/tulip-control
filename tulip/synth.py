@@ -391,7 +391,7 @@ def _assign(k, v, dvars):
     elif isinstance(dom, (set, list)):
         s = '{k} = "{v}"'.format(k=k, v=v)
     elif dom in {'bool', 'boolean'}:
-        s = '{k}'
+        s = '{k} <-> {v}'.format(k=k, v=v)
     else:
         raise Exception('domain is: {dom}'.format(dom=dom))
     return _pstr(s)
