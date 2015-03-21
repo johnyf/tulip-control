@@ -169,7 +169,6 @@ class Automaton(SystemGraph):
         self.universal_nodes = universal_nodes
         self.acceptance = acceptance
         self.accepting_sets = self._init_accepting_sets(acceptance)
-        alphabet = alphabet
         self.alphabet = alphabet
         self.directions = directions
         # explicit is better than implicit
