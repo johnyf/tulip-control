@@ -45,6 +45,17 @@ from tulip.interfaces import jtlv, gr1c
 _hl = '\n' + 60 * '-'
 
 
+def _prime_dict(d):
+    """Return `dict` with primed keys and `dict` mapping to them."""
+    p = dict((_prime(k), d[k]) for k in d)
+    d2p = {k: _prime(k) for k in d}
+    return p, d2p
+
+
+def _prime(s):
+    return s + "'"
+
+
 def _pstr(x):
     return '({x})'.format(x=x)
 
@@ -102,8 +113,8 @@ def exactly_one(iterable):
         for x in iterable]) + ')']
 
 
-# duplicate states are impossible, because each networkx vertex is unique
-# non-contiguous integerss for states fine: you are lossing efficiency
+# duplicate states are impossible, because each networkx node is unique
+# non-contiguous integers for states fine: you are lossing efficiency
 # -- synth doesn't care about that
 
 
@@ -142,7 +153,7 @@ def iter2var(var, values):
     return domain
 
 
-def sys_to_spec(g, ignore_initial, statevar):
+def sys_to_spec(g, nodevar, ignore_initial, receptive=False):
     """Convert transition system to GR(1) fragment of LTL.
 
     The attribute `g.owner` defines who selects the next node.
@@ -172,29 +183,42 @@ def sys_to_spec(g, ignore_initial, statevar):
                 if k in g.env_vars}
     sys_vars = {k: v for k, v in g.vars.iteritems()
                 if k not in g.env_vars}
-    node_ids, dom = iter2var(g, statevar)
-    init = _init_from_ts(g.initial_nodes, node_ids, ignore_initial)
-    tmp_init, tmp_trans = _node_var_trans(g, node_ids)
+    dom = _iter2var(g, nodevar)
     if g.owner == 'sys':
-        sys_vars[statevar] = dom
-        dvars = dict(env_vars)
-        dvars.update(sys_vars)
-        sys_init = init + tmp_init
-        sys_trans = _sys_trans(g, statevar, dvars)
-        sys_trans += tmp_trans
-        env_trans = _env_trans_from_sys_ts(g, node_ids)
+        sys_vars[nodevar] = dom
     elif g.owner == 'env':
-        env_vars[statevar] = dom
-        dvars = dict(env_vars)
-        dvars.update(sys_vars)
-        env_init = init + tmp_init
-        env_trans = tmp_trans + _env_trans(g, statevar, dvars)
+        env_vars[nodevar] = dom
     else:
         raise ValueError('owner is "{owner}"'.format(owner=g.owner))
+    dvars = dict(env_vars)
+    dvars.update(sys_vars)
+    # add primed copies -- same `dict` value
+    p, _ = _prime_dict(dvars)
+    dvars.update(p)
+    evars = dict(env_vars)
+    p, _ = _prime_dict(evars)
+    evars.update(p)
+    # convert to logic
+    init = _init_from_ts(g.initial_nodes, nodevar, dvars, ignore_initial)
+    tmp_init, nodepred = _node_var_trans(g, nodevar, dvars)
+    if g.owner == 'sys':
+        sys_init = init + tmp_init
+        sys_safe = _sys_trans(g, nodevar, dvars)
+        sys_safe += nodepred
+        env_init = list()
+        if receptive:
+            env_safe = _env_trans_from_sys_ts(g, nodevar, dvars)
+        else:
+            env_safe = list()
+    elif g.owner == 'env':
+        sys_init = list()
+        sys_safe = list()
+        env_init = init + tmp_init
+        env_safe = nodepred + _env_trans(g, nodevar, dvars)
     return GRSpec(
         sys_vars=sys_vars, env_vars=env_vars,
         env_init=env_init, sys_init=sys_init,
-        env_safety=env_trans, sys_safety=sys_trans)
+        env_safety=env_safe, sys_safety=sys_safe)
 
 
 def _node_var_trans(g, nodevar, dvars):
@@ -212,11 +236,11 @@ def _node_var_trans(g, nodevar, dvars):
         # initial node vars
         init.append('!({pre}) || ({r})'.format(pre=pre, r=r))
         # transitions of node vars
-        trans.append('X({pre} -> ({r}))'.format(pre=pre, r=r))
+        trans.append('(X (({pre}) -> ({r})))'.format(pre=pre, r=r))
     return (init, trans)
 
 
-def _init_from_ts(initial_nodes, node_ids, ignore_initial=False):
+def _init_from_ts(initial_nodes, nodevar, dvars, ignore_initial=False):
     """Initial state, including enforcement of exactly one."""
     if ignore_initial:
         return list()
@@ -228,7 +252,7 @@ def _init_from_ts(initial_nodes, node_ids, ignore_initial=False):
             '   so the spec becomes trivially False.\n'
             ' - assumption if this is an environment TS,\n'
             '   so the spec becomes trivially True.')
-    return [_disj([node_ids[s] for s in initial_nodes])]
+    return [_disj(_assign(nodevar, u, dvars) for u in initial_nodes)]
 
 
 def _sys_trans(g, nodevar, dvars):
@@ -240,15 +264,15 @@ def _sys_trans(g, nodevar, dvars):
         # no successors ?
         if not g.succ.get(u):
             logger.debug('node: {u} is deadend !'.format(u=u))
-            sys_trans.append('{pre} -> X(False)'.format(pre=pre))
+            sys_trans.append('({pre}) -> (X False)'.format(pre=pre))
             continue
         post = list()
         for u, v, d in g.edges_iter(u, data=True):
             t = dict(d)
-            t[nodevar + "'"] = v
+            t[_prime(nodevar)] = v
             r = _to_action(t, dvars)
             post.append(r)
-        c = '{pre} -> ({post})'.format(pre=pre, post=_disj(post))
+        c = '({pre}) -> ({post})'.format(pre=pre, post=_disj(post))
         sys_trans.append(c)
     return sys_trans
 
@@ -275,6 +299,9 @@ def _env_trans_from_sys_ts(g, nodevar, dvars):
         # collect possible next env actions
         c = set()
         for u, w, d in g.edges_iter(u, data=True):
+            # TODO: syntactic over-approximation not applied,
+            # so primed sys vars not filtered out here to
+            # derive guards
             t = _to_action(d, denv)
             if not t:
                 continue
@@ -311,19 +338,13 @@ def _env_trans(g, nodevar, dvars):
         post = list()
         sys = list()
         for u, v, d in g.out_edges_iter(u, data=True):
-            # can't have primed sys vars
-            for k in d:
-                isprimed = k.endswith("'")
-                if not isprimed:
-                    continue
-                var = k[:-1]
-                if var not in g.env_vars:
-                    raise Exception(
-                        'env action cannot refer to '
-                        'primed sys var: "{k}"'.format(k=k))
+            # primed sys vars cannot appear in Mealy games
+            # but can in Moore games.
+            # Checked later, in `spec`.
+            # Don't constrain the irrelevant.
             # action
             t = dict(d)
-            t[nodevar + "'"] = v
+            t[_prime(nodevar)] = v
             r = _to_action(t, dvars)
             post.append(r)
             # what sys vars ?
@@ -333,30 +354,28 @@ def _env_trans(g, nodevar, dvars):
             sys.append(r)
         # avoid sys winning env by blocking all edges
         post.append(_conj_neg(sys))
-        env_trans.append('{pre} -> ({post})'.format(
+        env_trans.append('({pre}) -> ({post})'.format(
             pre=pre, post=_disj(post)))
     return env_trans
 
 
 def _to_action(d, dvars):
-    primed = list()
-    unprimed = list()
+    """Return `str` conjoining assignments and `"formula"` in `d`.
+
+    @param d: (partial) mapping from variables in `dvars`
+        to values in their range, defined by `dvars`
+    @type d: `dict`
+    @type dvars: `dict`
+    """
+    c = list()
+    if 'formula' in d:
+        c.append(d['formula'])
     for k, v in d.iteritems():
-        isprimed = k.endswith("'")
-        var = k[:-1] if isprimed else k
-        if var not in dvars:
+        if k not in dvars:
             continue
         s = _assign(k, v, dvars)
-        if isprimed:
-            primed.append(s)
-        else:
-            unprimed.append(s)
-    c = list()
-    if unprimed:
-        c.append(_conj(unprimed))
-    if primed:
-        c.append('X({p})'.format(p=_conj(primed)))
-    return ' && '.join(c)
+        c.append(s)
+    return _conj(c)
 
 
 def _assign(k, v, dvars):
