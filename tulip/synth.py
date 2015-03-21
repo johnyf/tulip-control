@@ -263,7 +263,7 @@ def _env_trans_from_sys_ts(g, nodevar, dvars):
     picking a combination of actions for which sys has no outgoing
     transition from that state.
     """
-    denv = {k: v for k, v in dvars if k in g.env_vars}
+    denv = {k: v for k, v in dvars.iteritems() if k in g.env_vars}
     env_trans = list()
     for u in g.nodes_iter():
         # no successor states ?
