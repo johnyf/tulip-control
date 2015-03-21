@@ -239,7 +239,7 @@ def _sys_trans(g, nodevar, dvars):
     for u in g.nodes_iter():
         pre = _assign(nodevar, u, dvars)
         # no successors ?
-        if not g.succ[u]:
+        if not g.succ.get(u):
             logger.debug('node: {u} is deadend !'.format(u=u))
             sys_trans.append('{pre} -> X(False)'.format(pre=pre))
             continue
@@ -268,7 +268,7 @@ def _env_trans_from_sys_ts(g, nodevar, dvars):
     env_trans = list()
     for u in g.nodes_iter():
         # no successor states ?
-        if not g.succ[u]:
+        if not g.succ.get(u):
             # nothing modeled for env, since sys has X(False) anyway
             # for action_type, codomain_map in env_action_ids.iteritems():
             # env_trans += [precond + ' -> X(' + s + ')']
@@ -295,7 +295,7 @@ def _env_trans(g, nodevar, dvars):
     for u in g.nodes_iter():
         pre = _assign(nodevar, u, dvars)
         # no successors ?
-        if not g.succ[u]:
+        if not g.succ.get(u):
             env_trans.append('{pre} -> X(False)'.format(pre=pre))
             warnings.warn(
                 'Environment dead-end found.\n'
@@ -711,7 +711,7 @@ def strategy2mealy(A, spec):
             logger.debug('found initial state: {u}'.format(u=u))
         logger.debug('machine vertex: {u}, has var values: {v}'.format(
                      u=u, v=var_values))
-    if not mach.successors('Sinit'):
+    if not mach.succ.get('Sinit'):
         import pprint
         raise Exception(
             'The machine obtained from the strategy '

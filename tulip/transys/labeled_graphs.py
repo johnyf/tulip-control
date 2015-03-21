@@ -302,7 +302,7 @@ def remove_deadends(g):
     """Recursively delete nodes with no outgoing transitions."""
     s = {1}
     while s:
-        s = {n for n in g if not g.succ[n]}
+        s = {n for n in g if not g.succ.get(n)}
         g.remove_nodes_from(s)
     g.make_consistent()
     return g
