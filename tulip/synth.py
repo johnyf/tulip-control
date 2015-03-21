@@ -134,15 +134,12 @@ def iter2var(var, values):
     all_int = all(isinstance(x, int) for x in values)
     all_str = all(isinstance(x, str) for x in values)
     if all_int:
-        f = lambda v: '{var} = {v}'.format(var=var, v=v)
         domain = (min(values), max(values))
     elif all_str:
-        f = lambda v: '{var} = "{v}"'.format(var=var, v=v)
         domain = list(values)
     else:
         raise TypeError('Integer and string states must not be mixed.')
-    ids = {x: f(x) for x in values}
-    return ids, domain
+    return domain
 
 
 def sys_to_spec(g, ignore_initial, statevar):
