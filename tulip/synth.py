@@ -311,7 +311,7 @@ def _env_trans_from_sys_ts(g, nodevar, dvars):
             continue
         post = _disj(c)
         pre = _assign(nodevar, u, dvars)
-        env_trans.append('{pre} -> X({post})'.format(pre=pre, post=post))
+        env_trans.append('(({pre}) -> ({post}))'.format(pre=pre, post=post))
     return env_trans
 
 
