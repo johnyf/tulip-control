@@ -119,13 +119,13 @@ def iter2var(var, values):
     @param values: domain of `int` or `str` variable.
     @type values: iterable container
     @param var: name to use for integer or string valued variabe.
-    @type var: C{str}
+    @type var: `str`
 
-    @return: C{tuple} of:
+    @return: `tuple` of:
       - mapping from values to GR(1) actions.
         If Booleans are used, then GR(1) are the same.
         Otherwise, they map to e.g. 'act = "wait"' or 'act = 3'
-    @rtype: C{dict}
+    @rtype: `dict`
     """
     if not values:
         logger.debug('empty container, so empty dict for solver expr')
@@ -156,17 +156,19 @@ def sys_to_spec(g, ignore_initial, statevar):
     Initial values of variables that label only edges
     have to be specified separately.
 
-    @param g: [TransitionSystem]
+    @param g: `TransitionSystem`
+    @param nodevar: variable that stores current node
+    @type nodevar: `str`
     @param ignore_initial: Do not include initial state info from TS.
         Enable this to mask absence of FTS initial states.
         Useful when initial states are specified in another way,
         e.g., directly augmenting the spec part.
     @type ignore_initial: `bool`
-    @param statevar: variable that stores current node
-    @type statevar: `str`
+    @param receptive: if `True`, then add assumptions to
+        ensure receptiveness at each node.
 
     @return: GR(1) formula representing `g`.
-    @rtype: L{GRSpec}
+    @rtype: `GRSpec`
     """
     assert g.is_consistent()
     env_vars = {k: v for k, v in g.vars.iteritems()
@@ -258,7 +260,7 @@ def _env_trans_from_sys_ts(g, nodevar, dvars):
     """Convert environment actions to GR(1) env_safety.
 
     This constrains the actions available next to the environment
-    based on the system FTS.
+    based on the transition system.
 
     Purpose is to prevent env from blocking sys by purely
     picking a combination of actions for which sys has no outgoing
@@ -290,7 +292,13 @@ def _env_trans_from_sys_ts(g, nodevar, dvars):
 
 
 def _env_trans(g, nodevar, dvars):
-    """Convert environment transitions to GR(1) safety assumption."""
+    """Convert environment transitions to GR(1) safety assumption.
+
+    @type g: `networkx.MutliDigraph`
+    @param nodevar: name of variable representing current node
+    @type nodevar: `str`
+    @type dvars: `dict`
+    """
     env_trans = list()
     for u in g.nodes_iter():
         pre = _assign(nodevar, u, dvars)
@@ -355,6 +363,12 @@ def _to_action(d, dvars):
 
 
 def _assign(k, v, dvars):
+    """Return `str` of equality of variable `k` to value `v`.
+
+    @type k: `str`
+    @type v: `str` or `int`
+    @type dvars: `dict`
+    """
     dom = dvars[k]
     if isinstance(dom, tuple):
         s = '{k} = {v}'.format(k=k, v=v)
@@ -368,7 +382,7 @@ def _assign(k, v, dvars):
 
 
 def build_dependent_var_table(fts, statevar):
-    """Return a C{dict} of substitution rules for dependent variables.
+    """Return a `dict` of substitution rules for dependent variables.
 
     The dependent variables in a transition system are the
     atomic propositions that are used to label states.
@@ -379,23 +393,25 @@ def build_dependent_var_table(fts, statevar):
 
     The returned substitutions can be used
 
-    @type fts: L{FTS}
+    @type fts: `TransitionSystem`
 
     @param statevar: name of variable used for the current state
         For example if it is 'loc', then the states
-        C{'s0', 's1'} are mapped to::
+        `'s0', 's1'` are mapped to:
 
+        ```
           {'s0': '(loc = "s0")',
            's1': '(loc = "s1")'}
+        ```
 
-    @type state_ids: C{dict}
+    @type state_ids: `dict`
 
-    @rtype: C{{'p': '((loc = "s1") | (loc = "s2") | ...)', ...}}
+    @rtype: `{'p': '((loc = "s1") | (loc = "s2") | ...)', ...}`
         where:
 
-          - C{'p'} is a proposition in C{fts.atomic_propositions}
-          - the states "s1", "s2" are labeled with C{'p'}
-          - C{loc} is the string variable used for the state of C{fts}.
+          - `'p'` is a proposition in `fts.atomic_propositions`
+          - the states "s1", "s2" are labeled with `'p'`
+          - `loc` is the string variable used for the state of `fts`.
     """
     state_ids, __ = iter2var(fts, variables=dict(), statevar=statevar,
                              bool_states=False, must='xor')
@@ -407,10 +423,10 @@ def build_dependent_var_table(fts, statevar):
 def map_ap_to_states(fts):
     """For each proposition find the states labeled with it.
 
-    @type fts: L{FTS}
+    @type fts: `TransitionSystem`
 
-    @rtype: C{{'p': s, ...}} where C{'p'} a proposition and
-        C{s} a set of states in C{fts}.
+    @rtype: `{'p': s, ...}` where `'p'` a proposition and
+        `s` a set of states in `fts`.
     """
     table = {p: set() for p in fts.atomic_propositions}
     for u in fts:
@@ -436,48 +452,50 @@ def synthesize_many(specs, ts=None, ignore_init=None, solver='gr1c'):
     represented in logic with a single variable,
     that ranges over a finite set of integers or strings, respectively.
 
-    The keys of C{ts} are used to name each state variable.
-    So the logic formula for C{ts['name']} will be C{'name'}.
+    The keys of `ts` are used to name each state variable.
+    So the logic formula for `ts['name']` will be `'name'`.
 
     Who controls this state variable is determined from
-    the attribute C{FTS.owner} that can take the values:
+    the attribute `TransitionSystem.owner` that can take the values:
 
-      - C{'env'}
-      - C{'sys'}
+      - `'env'`
+      - `'sys'`
 
     For example:
-
-      >>> ts.add_nodes_from(xrange(4))
-      >>> ts['door'].owner = 'env'
+    ```
+    ts.add_nodes_from(xrange(4))
+    ts['door'].owner = 'env'
+    ```
 
     will result in a logic formula with
-    an integer variable C{'door'}
+    an integer variable `'door'`
     controlled by the environment and
-    taking values over C{{0, 1, 2, 3}}.
+    taking values over `{0, 1, 2, 3}`.
 
     The example:
+    ```
+    ts.add_nodes_from(['a', 'b', 'c'])
+    ts['door'].owner = 'sys'
+    ```
 
-      >>> ts.add_nodes_from(['a', 'b', 'c'])
-      >>> ts['door'].owner = 'sys'
-
-    will instead result in a string variable C{'door'}
+    will instead result in a string variable `'door'`
     controlled by the system and taking
-    values over C{{'a', 'b', 'c'}}.
+    values over `{'a', 'b', 'c'}`.
 
-    @type specs: L{GRSpec}
+    @type specs: `GRSpec`
 
-    @type ts: C{dict} of L{TransitionSystem}
+    @type ts: `dict` of `TransitionSystem`
 
-    @type ignore_init: C{set} of keys from C{ts}
+    @type ignore_init: `set` of keys from `ts`
 
-    @param solver: 'gr1c' or 'jtlv'
-    @type solver: str
+    @param solver: `'gr1c'` or `'jtlv'`
+    @type solver: `str`
     """
     assert isinstance(ts, dict)
     for name, t in ts.iteritems():
         ignore = name in ignore_init
         statevar = name
-        specs |= sys_to_spec(t, ignore, statevar)
+        specs |= sys_to_spec(t, statevar, ignore)
     if solver == 'gr1c':
         ctrl = gr1c.synthesize(specs)
     elif solver == 'jtlv':
@@ -509,7 +527,8 @@ def synthesize(option, specs, env=None, sys=None,
       - all strings
 
     For more details of how the transition system is represented in
-    logic look at L{synthesize_many}.
+    logic look at `synthesize_many`.
+
 
     Beware!
     =======
@@ -518,48 +537,43 @@ def synthesize(option, specs, env=None, sys=None,
     arguments supported and types of objects returned may change
     without notice.
 
+
     @param option: Magic string that declares what tool to invoke,
         what method to use, etc.  Currently recognized forms:
 
-          - C{"gr1c"}: use gr1c for GR(1) synthesis via L{interfaces.gr1c}.
-          - C{"jtlv"}: use JTLV for GR(1) synthesis via L{interfaces.jtlv}.
-    @type specs: L{spec.GRSpec}
-
+          - `"gr1c"`: use gr1c for GR(1) synthesis via `interfaces.gr1c`.
+          - `"jtlv"`: use JTLV for GR(1) synthesis via `interfaces.jtlv`.
+    @type specs: `spec.GRSpec`
     @param env: A transition system describing the environment:
 
             - states controlled by environment
-            - input: sys_actions
-            - output: env_actions
+            - input: `vars` not in `env_vars`
+            - output: `env_vars`
             - initial states constrain the environment
 
         This constrains the transitions available to
         the environment, given the outputs from the system.
-    @type env: L{TransitionSystem}
-
+    @type env: `TransitionSystem`
     @param sys: A transition system describing the system:
 
             - states controlled by the system
-            - input: env_actions
-            - output: sys_actions
+            - input: `env_vars`
+            - output: `vars` not in `env_vars`
             - initial states constrain the system
-
-    @type sys: L{TransitionSystem}
-
+    @type sys: `TransitionSystem`
     @param ignore_sys_init: Ignore any initial state information
         contained in env.
-    @type ignore_sys_init: bool
-
+    @type ignore_sys_init: `bool`
     @param ignore_env_init: Ignore any initial state information
         contained in sys.
-    @type ignore_env_init: bool
-
+    @type ignore_env_init: `bool`
     @param rm_deadends: return a strategy that contains no terminal states.
-    @type rm_deadends: bool
+    @type rm_deadends: `bool`
 
     @return: If spec is realizable,
         then return a Mealy machine implementing the strategy.
-        Otherwise return None.
-    @rtype: L{MealyMachine} or None
+        Otherwise return `None`.
+    @rtype: `MealyMachine` or `None`
     """
     specs = _spec_plus_sys(specs, env, sys, ignore_env_init,
                            ignore_sys_init)
@@ -590,7 +604,7 @@ def is_realizable(option, specs, env=None, sys=None,
                   ignore_env_init=False, ignore_sys_init=False):
     """Check realizability.
 
-    For details see L{synthesize}.
+    For details, see `synthesize`.
     """
     specs = _spec_plus_sys(
         specs, env, sys,
@@ -639,19 +653,14 @@ def _spec_plus_sys(specs, env, sys, ignore_env_init, ignore_sys_init):
 def strategy2mealy(A, spec):
     """Convert strategy to Mealy transducer.
 
-    Note that the strategy is a deterministic game graph,
-    but the input C{A} is given as the contraction of
-    this game graph.
+    `A` is the contraction of the (deterministic) game graph
+    that is the strategy.
 
     @param A: strategy
-    @type A: C{networkx.DiGraph}
+    @type A: `networkx.DiGraph`
+    @type spec: `GRSpec`
 
-    @type spec: L{GRSpec}
-
-    @return: tuple of the form (L{GRSpec}, L{MealyMachine}).  Either
-        or both can be None if the corresponding part is missing.
-        Note that the returned GRSpec instance depends only on what is
-        in the given tulipcon XML string x, not on the argument spec0.
+    @return: `MealyMachine`
     """
     logger.info('converting strategy (compact) to Mealy machine')
     if not A:
@@ -731,17 +740,16 @@ def strategy2mealy(A, spec):
 def _int2str(label, str_vars):
     """Replace integers with string values for string variables.
 
-    @param: mapping from variable names, to integer (as strings)
-    @type label: C{dict}
-
+    @param label: mapping from variable names, to integer (as strings)
+    @type label: `dict`
     @param str_vars: mapping that defines those variables that
         should be converted from integer to string variables.
         Each variable is mapped to a list of strings that
         comprise its range. This list defines how integer values
         correspond to string literals for that variable.
-    @type str_vars: C{dict}
+    @type str_vars: `dict`
 
-    @rtype: C{dict}
+    @rtype: `dict`
     """
     label = dict(label)
     label.update({k: str_vars[k][int(v)]
@@ -759,7 +767,7 @@ def mask_outputs(machine):
 
 
 def determinize_machine_init(mach, init_out_values=None):
-    """Return a determinized copy of C{mach} with given initial outputs.
+    """Return a determinized copy of `mach` with given initial outputs.
 
     The transducers produced by synthesis can have multiple
     initial output valuations as possible reactions to a
@@ -768,7 +776,7 @@ def determinize_machine_init(mach, init_out_values=None):
     Possible reasons for this are:
 
       1. the system does not have full control over its initial state.
-        For example the option "ALL_INIT" of C{gr1c}.
+        For example the option `"ALL_INIT"` of `gr1c`.
 
       2. the strategy returned by the solver has multiple
         vertices that satisfy the initial conditions.
@@ -779,7 +787,7 @@ def determinize_machine_init(mach, init_out_values=None):
     each run of the transducer, because the transducer does
     not have full freedom to pick the initial output values.
 
-    Note that solver options like "ALL_INIT"
+    Note that solver options like `"ALL_INIT"`
     assume that the system has no control initially.
     Any output valuation that satisfies the initial
     conditions can occur.
@@ -794,13 +802,13 @@ def determinize_machine_init(mach, init_out_values=None):
 
     Case 2
     ======
-    The function L{strategy2mealy} returns a transducer that
+    The function `strategy2mealy` returns a transducer that
     for each initial input valuation,
     for each initial output valuation,
     reacts with a unique transition.
 
     But this can yield multile reactions to a single input,
-    even for solver options like "ALL_ENV_EXIST_SYS_INIT" for C{gr1c}.
+    even for solver options like `"ALL_ENV_EXIST_SYS_INIT"` for `gr1c`.
     The reason is that there can be multiple strategy vertices
     that satisfy the initial conditions, but the solver
     included them not because they are needed as initial reactions,
@@ -819,24 +827,24 @@ def determinize_machine_init(mach, init_out_values=None):
     there is only a single reaction (output valuation) available.
 
     The non-determinism is resolved for the initial reaction
-    by ensuring the outputs given in C{init_out_values}
+    by ensuring the outputs given in `init_out_values`
     take those values.
     The remaining outputs are determinized arbitrarily.
 
     See also
     ========
-    L{synthesize}, L{strategy2mealy}
+    `synthesize`, `strategy2mealy`
 
     @param mach: possibly non-deterministic transducer,
-        as produced, for example, by L{synthesize}.
-    @type mach: L{MealyMachine}
+        as produced, for example, by `synthesize`.
+    @type mach: `MealyMachine`
 
     @param init_out_values: mapping from output ports that
         the system cannot control initially,
         to the initial values they take in this instance of the game.
-    @type init_out_values: C{dict}
+    @type init_out_values: `dict`
 
-    @rtype: L{MealyMachine}
+    @rtype: `MealyMachine`
     """
     mach = copy.deepcopy(mach)
     if init_out_values is None:
