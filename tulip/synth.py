@@ -429,8 +429,9 @@ def build_dependent_var_table(fts, statevar):
           - the states "s1", "s2" are labeled with `'p'`
           - `loc` is the string variable used for the state of `fts`.
     """
-    state_ids, __ = iter2var(fts, variables=dict(), statevar=statevar,
-                             bool_states=False, must='xor')
+    raise NotImplementedError('under maintenance')
+    state_ids, __ = _iter2var(fts, variables=dict(), statevar=statevar,
+                              bool_states=False, must='xor')
     ap2states = map_ap_to_states(fts)
     return {k: _disj(state_ids[x] for x in v)
             for k, v in ap2states.iteritems()}
