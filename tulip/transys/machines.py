@@ -34,7 +34,8 @@ from __future__ import absolute_import
 import copy
 from pprint import pformat
 from random import choice
-from tulip.transys.labeled_graphs import LabeledDiGraph
+import networkx as nx
+from tulip.transys.labeled_graphs import SystemGraph
 
 # inline imports:
 #
@@ -81,7 +82,7 @@ def create_machine_ports(spc_vars):
     return ports
 
 
-class Transducer(LabeledDiGraph):
+class Transducer(SystemGraph):
     """Sequential Transducer, i.e., a letter-to-letter function.
 
     Inputs
@@ -154,7 +155,7 @@ class Transducer(LabeledDiGraph):
         by code, so the benefits of typedefs will be
         considerable compared to the required coding effort.
 
-    Guards annotate transitions::
+    Guards annotate edges::
 
       Guards: States x States ---> Input_Predicates
 
@@ -162,8 +163,8 @@ class Transducer(LabeledDiGraph):
     =======
     Similarly defined to inputs, but:
 
-      - for Mealy Machines they annotate transitions
-      - for Moore Machines they annotate states
+      - for Mealy Machines they annotate edges
+      - for Moore Machines they annotate nodes
 
     State Variables
     ===============
@@ -215,64 +216,7 @@ class Transducer(LabeledDiGraph):
         self.inputs = dict()
         self.outputs = dict()
         # self.set_actions = {}
-
-        # state labeling
-        self._state_label_def = dict()
-        self._state_dot_label_format = {'type?label': ':',
-                                        'separator': '\n'}
-
-        # edge labeling
-        self._transition_label_def = dict()
-        self._transition_dot_label_format = {'type?label': ':',
-                                             'separator': '\n'}
-        self._transition_dot_mask = dict()
-        self._state_dot_mask = dict()
-
-        self.default_export_fname = 'fsm'
-
-        LabeledDiGraph.__init__(self)
-
-        self.dot_node_shape = {'normal': 'ellipse'}
-        self.default_export_fname = 'fsm'
-
-    def add_inputs(self, new_inputs, masks=None):
-        """Create new inputs.
-
-        @param new_inputs: C{dict} of pairs {port_name : port_type}
-            where:
-                - port_name: str
-                - port_type: Iterable | check class
-        @type new_inputs: dict
-
-        @param masks: custom mask functions, for each sublabel
-            based on its current value
-            each such function returns:
-                - True, if the sublabel should be shown
-                - False, otherwise (to hide it)
-        @type masks: C{dict} of functions C{{port_name : mask_function}}
-            each C{mask_function} returns bool
-        """
-        for port_name, port_type in new_inputs.iteritems():
-            # append
-            self._transition_label_def[port_name] = port_type
-            # inform inputs
-            self.inputs[port_name] = port_type
-            # printing format
-            self._transition_dot_label_format[port_name] = str(port_name)
-            if masks is None:
-                continue
-            if port_name in masks:
-                mask_func = masks[port_name]
-                self._transition_dot_mask[port_name] = mask_func
-
-    def add_state_vars(self, new_state_vars):
-        for var_name, var_type in new_state_vars.iteritems():
-            # append
-            self._state_label_def[var_name] = var_type
-            # inform state vars
-            self.state_vars[var_name] = self._state_label_def[var_name]
-            # printing format
-            self._state_dot_label_format[var_name] = str(var_name)
+        super(Transducer, self).__init__()
 
 
 class MooreMachine(Transducer):
@@ -301,12 +245,6 @@ class MooreMachine(Transducer):
     <http://tulip-control.sourceforge.net/doc/bibliography.html#m56>}
     """
 
-    def __init__(self):
-        """Instantiate a Moore state machine."""
-        Transducer.__init__(self)
-        self.dot_node_shape = {'normal': 'ellipse'}
-        self.default_export_fname = 'moore'
-
     def __str__(self):
         """Get informal string representation."""
         s = (
@@ -318,7 +256,7 @@ class MooreMachine(Transducer):
             'Output Ports:\n\t(name : type)\n' +
             _print_ports(self.outputs) +
             'States & State Var Values: (state : outputs : vars)\n')
-        for state, label_dict in self.states(data=True):
+        for state, label_dict in self.nodes_iter(data=True):
             s += '\t' + str(state) + ' :\n'
             # split into vars and outputs
             var_values = {k: v for k, v in label_dict.iteritems()
@@ -329,30 +267,36 @@ class MooreMachine(Transducer):
                   _print_label(output_values))
         s += (
             'Initial States:\n' +
-            pformat(self.states.initial, indent=3) + 2 * '\n')
-        s += 'Transitions & Labels: (from --> to : label)\n'
-        for from_state, to_state, label_dict in self.transitions(data=True):
+            pformat(self.initial_nodes, indent=3) + 2 * '\n')
+        s += 'Edges & Labels: (from --> to : label)\n'
+        for u, v, d in self.edges_iter(data=True):
             s += (
-                '\t' + str(from_state) + ' ---> ' +
-                str(to_state) + ' :\n' +
-                _print_label(label_dict))
+                '\t' + str(u) + ' ---> ' +
+                str(v) + ' :\n' +
+                _print_label(d))
         s += _hl + '\n'
         return s
 
-    def add_outputs(self, new_outputs, masks=None):
-        for port_name, port_type in new_outputs.iteritems():
-            # append
-            self._state_label_def[port_name] = port_type
-            # inform state vars
-            self.outputs[port_name] = port_type
-            # printing format
-            self._state_dot_label_format[port_name] = \
-                '/' + str(port_name)
-            if masks is None:
-                continue
-            if port_name in masks:
-                mask_func = masks[port_name]
-                self._state_dot_mask[port_name] = mask_func
+    def to_pydot(self):
+        g = nx.MultiDiGraph()
+        for u, d in self.nodes_iter(data=True):
+            var = _join(d, self.state_vars)
+            o = _join(d, self.outputs)
+            r = list()
+            if var:
+                r.append('var:\n' + var)
+            if o:
+                r.append('out:\n' + o)
+            label = '\n'.join(r)
+            g.add_node(u, label=label, shape='ellipse')
+        for u, v, d in self.edges_iter(data=True):
+            i = _join(d, self.inputs)
+            if i:
+                label = 'in:\n' + i
+            else:
+                label = ''
+            g.add_edge(u, v, label=label)
+        return nx.to_pydot(g)
 
 
 class MealyMachine(Transducer):
@@ -365,31 +309,22 @@ class MealyMachine(Transducer):
 
     >>> m = MealyMachine()
     >>> pure_signal = {'present', 'absent'}
-    >>> m.add_inputs([('tick', pure_signal) ])
-    >>> m.add_outputs([('go', pure_signal), ('stop', pure_signal) ])
-    >>> m.states.add_from(['red', 'green', 'yellow'])
-    >>> m.states.initial.add('red')
+    >>> m.inputs.update([('tick', pure_signal) ])
+    >>> m.outputs.update([('go', pure_signal), ('stop', pure_signal) ])
+    >>> m.add_nodes_from(['red', 'green', 'yellow'])
+    >>> m.initial_nodes.add('red')
 
     For brevity:
 
     >>> p = 'present'
     >>> a = 'absent'
 
-    The transitions can equivalently be defined with dict().
-    So instead of the previous C{m.transitions.add}, we can use:
-
     >>> label = {'tick':p, 'go':p, 'stop':a}
-    >>> m.transitions.add('red', 'green', **label)
+    >>> m.add_edge('red', 'green', **label)
     >>> label = {'tick':p, 'go':a, 'stop':p}
-    >>> m.transitions.add('green', 'yellow', **label)
+    >>> m.add_edge('green', 'yellow', **label)
     >>> label = {'tick':p, 'go':a, 'stop':p}
-    >>> m.transitions.add('yellow', 'red', **label)
-
-    This avoids any ordering issues, i.e., changing the
-    order of the sublabels does not matter:
-
-    >>> label = {'go':p, 'tick':p, 'stop':a}
-    >>> m.transitions.add('red', 'green', **label)
+    >>> m.add_edge('yellow', 'red', **label)
 
     Theory
     ======
@@ -416,12 +351,6 @@ class MealyMachine(Transducer):
     <http://tulip-control.sourceforge.net/doc/bibliography.html#m55>}
     """
 
-    def __init__(self):
-        Transducer.__init__(self)
-        # will point to selected values of self._transition_label_def
-        self.dot_node_shape = {'normal': 'ellipse'}
-        self.default_export_fname = 'mealy'
-
     def __str__(self):
         """Get informal string representation."""
         s = (
@@ -429,72 +358,48 @@ class MealyMachine(Transducer):
             'State Variables:\n\t(name : type)\n' +
             _print_ports(self.state_vars))
         s += 'States & State Var Values:\n'
-        for state, label_dict in self.states(data=True):
+        for state, label_dict in self.nodes_iter(data=True):
             s += ('\t' + str(state) + ' :\n' +
                   _print_label(label_dict))
         s += (
             'Initial States:\n' +
-            pformat(self.states.initial, indent=3) + 2 * '\n' +
+            pformat(self.initial_nodes, indent=3) + 2 * '\n' +
             'Input Ports:\n\t(name : type)\n' +
             _print_ports(self.inputs) +
             'Output Ports:\n\t(name : type)\n' +
             _print_ports(self.outputs) +
-            'Transitions & Labels: (from --> to : label)\n')
-        for from_state, to_state, label_dict in self.transitions(data=True):
+            'Edges & Labels: (from --> to : label)\n')
+        for u, v, d in self.edges_iter(data=True):
             s += (
-                '\t' + str(from_state) + ' ---> ' +
-                str(to_state) + ' :\n' +
-                _print_label(label_dict))
+                '\t' + str(u) + ' ---> ' +
+                str(v) + ' :\n' +
+                _print_label(d))
         s += _hl + '\n'
         return s
 
-    def _save(self, path, fileformat):
-        """Export options available only for Mealy machines.
-
-        @type fileformat: 'scxml'
-        """
-        if fileformat != 'scxml':
-            return False
-        from tulip.transys.export import machine2scxml
-        s = machine2scxml.mealy2scxml(self)
-        # dump to file
-        f = open(path, 'w')
-        f.write(s)
-        f.close()
-        return True
-
-    def add_outputs(self, new_outputs, masks=None):
-        """Add new outputs.
-
-        @param new_outputs: dict of pairs {port_name : port_type}
-          where:
-            - port_name: str
-            - port_type: Iterable | check class
-        @type new_outputs: dict
-
-        @param masks: custom mask functions, for each sublabel
-            based on its current value
-            each such function returns:
-              - True, if the sublabel should be shown
-              - False, otherwise (to hide it)
-        @type masks: dict of functions
-            keys are port_names (see arg: new_outputs)
-            each function returns bool
-        """
-        for port_name, port_type in new_outputs.iteritems():
-            # append
-            self._transition_label_def[port_name] = port_type
-            # inform state vars
-            self.outputs[port_name] = \
-                self._transition_label_def[port_name]
-            # printing format
-            self._transition_dot_label_format[port_name] = \
-                '/' + str(port_name)
-            if masks is None:
-                continue
-            if port_name in masks:
-                mask_func = masks[port_name]
-                self._transition_dot_mask[port_name] = mask_func
+    def to_pydot(self, ports=None):
+        g = nx.MultiDiGraph()
+        for u, d in self.nodes_iter(data=True):
+            label = '{u}\n{l}'.format(u=u, l=_join(d, self.state_vars))
+            g.add_node(u, label=label, shape='ellipse')
+        for u, v, d in self.edges_iter(data=True):
+            if ports is None:
+                din = self.inputs
+                dout = self.outputs
+            else:
+                din = project_dict(self.inputs, ports)
+                dout = project_dict(self.outputs, ports)
+            i = _join(d, din)
+            o = _join(d, dout)
+            r = list()
+            if i:
+                r.append('in:\n' + i)
+            if o:
+                r.append('out:\n' + o)
+            label = '\n'.join(r)
+            label = label if label else '""'
+            g.add_edge(u, v, label=label)
+        return nx.to_pydot(g)
 
     def reaction(self, from_state, inputs):
         """Return next state and output, when reacting to given inputs.
@@ -503,19 +408,18 @@ class MealyMachine(Transducer):
         (for each state and input at most a single transition enabled,
         this notion does not coincide with output-determinism)
 
-        Not exactly a wrapper of L{Transitions.find},
+        Not exactly a wrapper of L{find_edges},
         because it matches only that part of an edge label
         that corresponds to the inputs.
 
-        @param from_state: transition starts from this state.
-        @type from_state: element of C{self.states}
+        @param from_state: source node of transition
 
         @param inputs: C{dict} assigning a valid value to each input port.
-        @type inputs: {'port_name':port_value, ...}
+        @type inputs: {'port_name': port_value, ...}
 
         @return: output values and next state.
         @rtype: (outputs, next_state)
-          where C{outputs}: C{{'port_name':port_value, ...}}
+          where C{outputs}: C{{'port_name': port_value, ...}}
         """
         # match only inputs (explicit valuations, not symbolic)
         enabled_trans = [
@@ -671,7 +575,7 @@ def guided_run(mealy, from_state=None, input_sequences=None):
     # note: initial sys state non-determinism not checked
     # initial sys edge non-determinism checked instead (more restrictive)
     if from_state is None:
-        state = next(iter(mealy.states.initial))
+        state = next(iter(mealy.initial_nodes))
     else:
         state = from_state
     n = len(next(seqs.itervalues()))
@@ -705,15 +609,15 @@ def random_run(mealy, from_state=None, N=10):
     @return: same as L{guided_run}
     """
     if from_state is None:
-        state = next(iter(mealy.states.initial))
+        state = next(iter(mealy.initial_nodes))
     else:
         state = from_state
     states_seq = []
     output_seqs = {k: list() for k in mealy.outputs}
     for i in xrange(N):
-        trans = mealy.transitions.find([state])
+        trans = mealy.out_edges(state)
         # choose next transition
-        selected_trans = choice(list(trans))
+        selected_trans = choice(trans)
         _, new_state, attr_dict = selected_trans
         # extend execution trace
         states_seq.append(new_state)
@@ -741,7 +645,7 @@ def interactive_run(mealy, from_state=None):
     @type mealy: L{MealyMachine}
     """
     if from_state is None:
-        state = next(iter(mealy.states.initial))
+        state = next(iter(mealy.initial_nodes))
     else:
         state = from_state
     while True:
@@ -757,7 +661,7 @@ def _interactive_run_step(mealy, state):
     #   by interactive simulation allowing both output-non-determinism
     #   and implementing spawning (which makes sense only for generators,
     #   *not* for transducers)
-    trans = mealy.transitions.find([state])
+    trans = mealy.out_edges(state)
     if not trans:
         print('Stop: no outgoing transitions.')
         return None
@@ -818,37 +722,22 @@ def moore2mealy(moore):
     if not isinstance(moore, MooreMachine):
         raise TypeError('moore must be a MooreMachine')
     mealy = MealyMachine()
-    # cp inputs
-    for port_name, port_type in moore.inputs.iteritems():
-        mask_func = moore._transition_dot_mask.get(port_name)
-        if mask_func is None:
-            masks = None
-        else:
-            masks = {port_name: mask_func}
-        mealy.add_inputs({port_name: port_type}, masks=masks)
-    # cp outputs
-    for port_name, port_type in moore.outputs.iteritems():
-        mask_func = moore._state_dot_mask.get(port_name)
-        if mask_func is None:
-            masks = None
-        else:
-            masks = {port_name: mask_func}
-        mealy.add_outputs({port_name: port_type}, masks=masks)
-    # cp states
-    mealy.states.add_from(moore.states())
-    mealy.states.initial.add_from(moore.states.initial)
+    mealy.inputs.update(mealy.inputs)
+    mealy.outputs.update(moore.outputs)
+    mealy.add_nodes_from(moore)
+    mealy.initial_nodes.update(moore.initial_nodes)
     # cp transitions
     for si in moore:
         output_values = {
-            k: v for k, v in moore.states[si].iteritems()
+            k: v for k, v in moore[si].iteritems()
             if k in moore.outputs}
         output_values = copy.deepcopy(output_values)
-        for si_, sj, attr_dict in moore.transitions.find(si):
+        for si_, sj, d in moore.out_edges_iter(si):
             # note that we don't filter only input ports,
             # so other edge annotation is preserved
-            attr_dict = copy.deepcopy(attr_dict)
-            attr_dict.update(output_values)
-            mealy.transitions.add(si, sj, attr_dict)
+            q = dict(d)
+            q.update(output_values)
+            mealy.add_edge(si, sj, q)
     return mealy
 
 
@@ -872,50 +761,36 @@ def mealy2moore(mealy):
     if not isinstance(mealy, MealyMachine):
         raise TypeError('moore must be a MealyMachine')
     moore = MooreMachine()
-    # cp inputs
-    for port_name, port_type in mealy.inputs.iteritems():
-        mask_func = mealy._transition_dot_mask.get(port_name)
-        if mask_func is None:
-            masks = None
-        else:
-            masks = {port_name: mask_func}
-        moore.add_inputs({port_name: port_type}, masks=masks)
-    # cp outputs
-    for port_name, port_type in mealy.outputs.iteritems():
-        mask_func = mealy._transition_dot_mask.get(port_name)
-        if mask_func is None:
-            masks = None
-        else:
-            masks = {port_name: mask_func}
-        moore.add_outputs({port_name: port_type}, masks=masks)
+    moore.inputs.update(mealy.inputs)
+    moore.outputs.update(mealy.outputs)
     # initial state with arbitrary label
     out = {k: list(v)[0] for k, v in mealy.outputs.iteritems()}
-    s0 = list(mealy.states.initial)[0]
+    s0 = next(iter(mealy.initial_nodes))
     # create maps between Moore and Mealy states
     moore2mealy_states = dict()  # {qj : si} (function)
     mealy2moore_states = dict()  # {si : {qj, qk, ...} } (relation)
     new_s0 = _create_state_str(
         s0, out, moore, moore2mealy_states,
         mealy2moore_states)
-    moore.states.add(new_s0, out)
-    moore.states.initial.add(new_s0)
+    moore.add_node(new_s0, out)
+    moore.initial_nodes.add(new_s0)
     # cp transitions and create appropriate states
     Q = set()
     S = set()
     Q.add(new_s0)
     S.add(new_s0)
     while Q:
-        new_si = Q.pop()
-        si = moore2mealy_states[new_si]
-        for si_, sj, attr_dict in mealy.transitions.find(si):
-            in_values, out_values = _split_io(attr_dict, mealy)
-            new_sj = _create_state_str(
-                sj, out_values, moore, moore2mealy_states,
+        u = Q.pop()
+        si = moore2mealy_states[u]
+        for _, oldv, d in mealy.edges_iter(si, data=True):
+            in_values, out_values = _split_io(d, mealy)
+            v = _create_state_str(
+                oldv, out_values, moore, moore2mealy_states,
                 mealy2moore_states)
-            moore.transitions.add(new_si, new_sj, in_values)
-            if new_sj not in S:
-                Q.add(new_sj)
-                S.add(new_sj)
+            moore.add_edge(u, v, in_values)
+            if v not in S:
+                Q.add(v)
+                S.add(v)
     return moore
 
 
@@ -942,12 +817,12 @@ def _create_state_str(mealy_state, output, moore,
     """Used to create Moore states when converting Mealy -> Moore."""
     for s in mealy2moore_states.setdefault(mealy_state, set()):
         # check output values
-        if moore.states[s] == output:
+        if moore.node[s] == output:
             return s
     # create new
     n = len(moore)
     s = 's' + str(n)
-    moore.states.add(s, output)
+    moore.add_node(s, output)
     moore2mealy_states[s] = mealy_state
     mealy2moore_states[mealy_state].add(s)
     return s
@@ -981,13 +856,20 @@ def strip_ports(mealy, names):
     """
     new = MealyMachine()
 
-    new.add_inputs(trim_dict(mealy.inputs, names))
-    new.add_outputs(trim_dict(mealy.outputs, names))
+    new.inputs.update(trim_dict(mealy.inputs, names))
+    new.outputs.update(trim_dict(mealy.outputs, names))
 
     new.add_nodes_from(mealy)
-    new.states.initial.add_from(mealy.states.initial)
+    new.initial_nodes.update(mealy.initial_nodes)
 
     for u, v, d in mealy.edges_iter(data=True):
         d = trim_dict(d, names)
         new.add_edge(u, v, **d)
     return new
+
+
+def _join(d, keys, sep=': ', itemsep='\n'):
+    return itemsep.join(
+        '{k}{sep}{v}'.format(k=k, sep=sep, v=v)
+        for k, v in d.iteritems()
+        if k in keys)

@@ -45,10 +45,8 @@ reference
    http://doi.org/10.4204/EPTCS.50.3
 """
 from __future__ import absolute_import
-
 import logging
 logger = logging.getLogger(__name__)
-
 import networkx as nx
 from tulip import transys as trs
 from tulip.spec import lexyacc, GRSpec
@@ -58,44 +56,42 @@ from tulip.spec import ast as sast
 
 
 def check(formula):
-    """Parse formula string and create abstract syntax tree (AST).
-    """
+    """Parse formula string and create abstract syntax tree (AST)."""
     ast = lexyacc.parse(formula)
+    dfa = trs.Automaton(acceptance='finite')
+    dfa.directions['letter'] = {
+        '!', 'W', 'U', 'G', 'F',
+        'U_left', 'U_right',
+        'W_left', 'W_right'}
+    nodes = {'gf', 'fg', 'g', 'f'}
+    dfa.add_nodes_from(nodes)
+    dfa.accepting_sets.update(nodes)
+    dfa.initial_nodes.add('gf')
 
-    dfa = trs.automata.FiniteWordAutomaton(atomic_proposition_based=False,
-                                           deterministic=True)
+    dfa.add_edge('gf', 'fg', letter='!')
+    dfa.add_edge('fg', 'gf', letter='!')
+    dfa.add_edge('g', 'f', letter='!')
+    dfa.add_edge('f', 'g', letter='!')
 
-    dfa.alphabet |= {'!', 'W', 'U', 'G', 'F',
-                     'U_left', 'U_right',
-                     'W_left', 'W_right'}
+    dfa.add_edge('gf', 'gf', letter='W')
+    dfa.add_edge('gf', 'gf', letter='U_left')
+    dfa.add_edge('gf', 'gf', letter='G')
 
-    dfa.states.add_from({'gf', 'fg', 'g', 'f'})
-    dfa.states.initial.add('gf')
+    dfa.add_edge('fg', 'fg', letter='U')
+    dfa.add_edge('fg', 'fg', letter='F')
+    dfa.add_edge('fg', 'fg', letter='W_right')
 
-    dfa.transitions.add('gf', 'fg', letter='!')
-    dfa.transitions.add('fg', 'gf', letter='!')
-    dfa.transitions.add('g', 'f', letter='!')
-    dfa.transitions.add('f', 'g', letter='!')
+    dfa.add_edge('gf', 'f', letter='U_right')
+    dfa.add_edge('gf', 'f', letter='F')
 
-    dfa.transitions.add('gf', 'gf', letter='W')
-    dfa.transitions.add('gf', 'gf', letter='U_left')
-    dfa.transitions.add('gf', 'gf', letter='G')
+    dfa.add_edge('fg', 'g', letter='W_left')
+    dfa.add_edge('fg', 'g', letter='G')
 
-    dfa.transitions.add('fg', 'fg', letter='U')
-    dfa.transitions.add('fg', 'fg', letter='F')
-    dfa.transitions.add('fg', 'fg', letter='W_right')
+    dfa.add_edge('g', 'g', letter='W')
+    dfa.add_edge('g', 'g', letter='G')
 
-    dfa.transitions.add('gf', 'f', letter='U_right')
-    dfa.transitions.add('gf', 'f', letter='F')
-
-    dfa.transitions.add('fg', 'g', letter='W_left')
-    dfa.transitions.add('fg', 'g', letter='G')
-
-    dfa.transitions.add('g', 'g', letter='W')
-    dfa.transitions.add('g', 'g', letter='G')
-
-    dfa.transitions.add('f', 'f', letter='U')
-    dfa.transitions.add('f', 'f', letter='F')
+    dfa.add_edge('f', 'f', letter='U')
+    dfa.add_edge('f', 'f', letter='F')
 
     # plot tree automaton
     # dfa.save('dfa.pdf')
@@ -114,7 +110,7 @@ def check(formula):
             op = s.operator
 
             if op in {'!', 'G', 'F'}:
-                t = dfa.transitions.find(q, letter=op)
+                t = _filter_edges(dfa, q, dict(letter=op))
 
                 if not t:
                     raise Exception('not in fragment')
@@ -129,13 +125,13 @@ def check(formula):
             op = s.operator
 
             if op in {'W', 'U'}:
-                t = dfa.transitions.find(q, letter=op)
+                t = _filter_edges(dfa, q, dict(letter=op))
                 if t:
                     qi, qj, w = t[0]
                     Q.append((s.op_l, qj))
                     Q.append((s.op_r, qj))
                 else:
-                    t = dfa.transitions.find(q, letter=op + '_left')
+                    t = _filter_edges(dfa, q, dict(letter=op + '_left'))
 
                     if not t:
                         raise Exception('not in fragment')
@@ -144,7 +140,7 @@ def check(formula):
 
                     Q.append((s.op_l, qj))
 
-                    t = dfa.transitions.find(q, letter=op + '_right')
+                    t = _filter_edges(dfa, q, dict(letter=op + '_right'))
 
                     if not t:
                         raise Exception('not in fragment')
@@ -160,6 +156,10 @@ def check(formula):
             print('reached var')
 
     return ast
+
+
+def _filter_edges(g, u, attr):
+    return [e for e, d in g.edges(u, data=True) if d == attr]
 
 
 def str_to_grspec(f):

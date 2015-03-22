@@ -29,28 +29,15 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
-"""TuLiP Toolbox Transition System subpackage
+#
+"""Automata, transducers, and generators.
 
-Suggested abbreviation:
-
-    >>> from tulip import transys as trs
+Includes:
+  - enumerated and semi-symbolic automata
+  - enumerated transducers
+  - enumerated and semi-symbolic generators
 """
 from __future__ import absolute_import
-from .mathset import MathSet, SubSet, PowerSet, TypedDict
-from .labeled_graphs import prepend_with
-from .transys import (
-    KripkeStructure, FiniteTransitionSystem, FTS,
-    LabeledGameGraph,
-    tuple2fts, line_labeled_with, cycle_labeled_with
-)
-
-from .automata import (
-    BuchiAutomaton, BA, tuple2ba,
-    RabinAutomaton, DRA,
-    ParityGame
-)
-
-
+from .transys import TransitionSystem
+from .automata import Automaton
 from .machines import MooreMachine, MealyMachine
-
-from .products import OnTheFlyProductAutomaton
