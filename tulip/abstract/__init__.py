@@ -33,6 +33,23 @@
 """TuLiP Toolbox Abstract subpackage
 """
 from __future__ import absolute_import
+# check dependencies
+try:
+    import numpy
+except ImportError:
+    raise ImportError('`abstract` needs package `numpy` to be installed.')
+try:
+    import scipy
+except ImportError:
+    raise ImportError('`abstract` needs package `scipy` to be installed.')
+try:
+    import cvxopt
+except ImportError:
+    raise ImportError('`abstract` needs package `cvxopt` to be installed.')
+try:
+    import polytope
+except ImportError:
+    raise ImportError('`abstract` needs package `polytope` to be installed.')
 
 # avoid shadowing modules
 from .discretization import (
